@@ -244,17 +244,29 @@ function tab(btn,id){
 
 /* MOTIVÁCIÓ */
 function newQuote(){
- let q=quotes[Math.floor(Math.random()*quotes.length)];
- quote.innerText=q.t;
- motImg.src=q.i;
- authorTag.innerText=q.a;
- authorTag.className=q.a==="David Goggins"?"author-goggins":"";
- dailyQuote.innerText=q.t+" – "+q.a;
+ let q = quotes[Math.floor(Math.random() * quotes.length)];
+
+ quote.innerText = q.t;
+ motImg.src = q.i;
+ motImg.alt = q.a;
+
+ authorTag.innerText = q.a;
+ authorTag.className = (q.a === "David Goggins") ? "author-goggins" : "";
+
+ dailyQuote.innerText = q.t + " – " + q.a;
+
 }
 function addFavorite(){
- let f=JSON.parse(localStorage.getItem("favQuotes")||"[]");
- f.push({t:quote.innerText,a:authorTag.innerText});
- localStorage.setItem("favQuotes",JSON.stringify(f));
+ let fav = JSON.parse(localStorage.getItem("favQuotes") || "[]");
+
+ fav.push({
+   text: quote.innerText,
+   author: authorTag.innerText
+ });
+
+ localStorage.setItem("favQuotes", JSON.stringify(fav));
+ alert("⭐ Kedvenc idézet elmentve");
+
 }
 
 /* NAPLÓ */
@@ -318,3 +330,4 @@ newQuote();
 
 </body>
 </html>
+
