@@ -242,25 +242,40 @@ let statMode="week";
 function switchStat(m){statMode=m;loadStats();}
 
 function loadStats(){
- let j=JSON.parse(localStorage.journal||"[]");
- let s=JSON.parse(localStorage.sport||"[]");
- let b=JSON.parse(localStorage.book||"[]");
+ let j = JSON.parse(localStorage.journal || "[]");
+ let s = JSON.parse(localStorage.sport || "[]");
+ let b = JSON.parse(localStorage.book || "[]");
 
- statWrite.innerText="Naplók: "+j.length;
- statSport.innerText="Edzések: "+s.length;
- statBook.innerText="Könyvek: "+b.length;
+ statWrite.innerText = "Naplók: " + j.length;
+ statSport.innerText = "Edzések: " + s.length;
+ statBook.innerText  = "Könyvek: " + b.length;
 
- if(window.c)window.c.destroy();
- window.c=new Chart(statChart,{
+ if(window.c) window.c.destroy();
+
+ window.c = new Chart(statChart,{
   type:"bar",
-  data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[j.length,s.length,b.length]}]},
-  options:{plugins:{legend:{display:false}}}
+  data:{
+   labels:["Napló","Edzés","Könyv"],
+   datasets:[{
+    data:[j.length, s.length, b.length]
+   }]
+  },
+  options:{
+   plugins:{
+    legend:{ display:false }
+   },
+   scales:{
+    y:{ beginAtZero:true }
+   }
+  }
  });
 }
+
 
 newQuote();
 </script>
 </body>
 </html>
+
 
 
