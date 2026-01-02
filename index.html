@@ -220,6 +220,12 @@ img.thumb{
  <div class="stat-box" id="statSport"></div>
  <div class="stat-box" id="statBook"></div>
 
+ <canvas id="statChart" style="width:100%;max-height:260px;"></canvas>
+
+ <!-- visszanézések maradnak -->
+</div>
+
+
  <!-- VISSZANÉZÉS -->
  <div class="card">
   <b>📓 Napló visszanézés</b>
@@ -369,59 +375,89 @@ function loadFav(){
 
 /* STAT */
 function loadStats(){
- let journals = JSON.parse(localStorage.getItem("journal")||"[]");
- let sports = JSON.parse(localStorage.getItem("sport")||"[]");
- let books = JSON.parse(localStorage.getItem("book")||"[]");
 
- statWrite.innerText="📓 Naplók: "+journals.length;
- statSport.innerText="🏋️ Edzések: "+sports.length;
- statBook.innerText="📚 Könyvek: "+books.length;
+  let journals = JSON.parse(localStorage.getItem("journal") || "[]");
+  let sports   = JSON.parse(localStorage.getItem("sport") || "[]");
+  let books    = JSON.parse(localStorage.getItem("book") || "[]");
 
-// Napló visszanézés
-statJournalList.innerHTML="";
-journals.forEach((j,i)=>{
- let d=document.createElement("div");
- d.className="card";
- d.innerHTML = `
-  ${j}
-  <button class="delBtn" onclick="delJournal(${i})">X</button>
- `;
- statJournalList.appendChild(d);
-});
+  /* ÖSSZESÍTÉS */
+  statWrite.innerText = "📓 Naplók: " + journals.length;
+  statSport.innerText = "🏋️ Edzések: " + sports.length;
+  statBook.innerText  = "📚 Könyvek: " + books.length;
 
+  /* 📓 NAPLÓ VISSZANÉZÉS */
+  statJournalList.innerHTML = "";
+  journals.forEach((j,i)=>{
+    let d = document.createElement("div");
+    d.className = "card";
+    d.innerHTML = `
+      ${j}
+      <button class="delBtn" onclick="delJournal(${i})">X</button>
+    `;
+    statJournalList.appendChild(d);
+  });
 
- // Edzés visszanézés
- statSportList.innerHTML="";
-sports.forEach((s,i)=>{
- let d=document.createElement("div");
- d.className="card";
- d.innerHTML = `
-  <b>${s.type}</b> – ${s.time} perc
-  <button class="delBtn" onclick="delSport(${i})">X</button>
- `;
- statSportList.appendChild(d);
-});
+  /* 🏋️ EDZÉS VISSZANÉZÉS */
+  statSportList.innerHTML = "";
+  sports.forEach((s,i)=>{
+    let d = document.createElement("div");
+    d.className = "card";
+    d.innerHTML = `
+      <b>${s.type}</b> – ${s.time} perc<br>
+      <small>${s.note || ""}</small>
+      <button class="delBtn" onclick="delSport(${i})">X</button>
+    `;
+    statSportList.appendChild(d);
+  });
 
+  /* 📚 KÖNYV VISSZANÉZÉS */
+  statBookList.innerHTML = "";
+  books.forEach((b,i)=>{
+    let d = document.createElement("div");
+    d.className = "card";
+    d.innerHTML = `
+      <b>${b.title}</b> – ${b.pages} oldal
+      <button class="delBtn" onclick="delBook(${i})">X</button>
+    `;
+    statBookList.appendChild(d);
+  });
 
- // Könyv visszanézés
-statBookList.innerHTML="";
-books.forEach((b,i)=>{
- let d=document.createElement("div");
- d.className="card";
- d.innerHTML = `
-  <b>${b.title}</b> – ${b.pages} oldal
-  <button class="delBtn" onclick="delBook(${i})">X</button>
- `;
- statBookList.appendChild(d);
-});
+  /* 📊 DIAGRAM */
+  if(window.statChartObj){
+    window.statChartObj.destroy();
+  }
+
+  const ctx = document.getElementById("statChart");
+  window.statChartObj = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Napló", "Edzés", "Könyv"],
+      datasets: [{
+        data: [
+          journals.length,
+          sports.length,
+          books.length
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
 }
-
 
 newQuote();
 </script>
 
 </body>
 </html>
+
 
 
 
