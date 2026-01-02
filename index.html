@@ -6,8 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="manifest" href="manifest.json">
-
-<!-- ✅ CHART.JS KÖTELEZŐ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -50,9 +48,26 @@ body{
  background:#ff9800;
  color:#000;
 }
-.tabs button.active{background:#ff9800;color:#000;}
 .view{display:none;}
 .view.active{display:block;}
+
+.stat-tabs{
+ display:flex;
+ gap:6px;
+ margin-bottom:10px;
+}
+.stat-tabs button{
+ flex:1;
+ border:none;
+ border-radius:14px;
+ padding:10px;
+ background:#333;
+ color:#fff;
+}
+.stat-tabs button.active{
+ background:#ff9800;
+ color:#000;
+}
 
 .header-quote{text-align:center;font-size:14px;margin-bottom:8px;opacity:.9;}
 
@@ -78,17 +93,15 @@ body{
  color:#ff9800;
  margin-bottom:6px;
 }
-.author-goggins{background:#c62828;color:#fff;}
 .big-quote{font-size:26px;font-weight:bold;}
 
-input,textarea,select{
+textarea,input,select{
  width:100%;
  padding:12px;
  border-radius:14px;
  border:none;
  margin-top:8px;
 }
-textarea{min-height:140px;}
 
 button{
  width:100%;
@@ -102,7 +115,6 @@ button{
 
 .card{background:#1d1d1d;border-radius:16px;padding:12px;margin-bottom:8px;}
 .stat-box{background:#222;border-radius:16px;padding:12px;margin-bottom:8px;}
-.delBtn{float:right;background:#c62828;color:#fff;border:none;border-radius:10px;padding:4px 10px;}
 </style>
 </head>
 
@@ -114,8 +126,6 @@ button{
  <button onclick="tab(this,'nap')">📓</button>
  <button onclick="tab(this,'sport')">🏋️</button>
  <button onclick="tab(this,'book')">📚</button>
- <button onclick="tab(this,'fav')">⭐</button>
- <button onclick="tab(this,'profile')">👤</button>
  <button onclick="tab(this,'stat')">📊</button>
 </div>
 
@@ -129,56 +139,31 @@ button{
   <div class="big-quote" id="quote"></div>
  </div>
  <button class="main" onclick="newQuote()">Új motiváció</button>
- <button class="secondary" onclick="addFavorite()">⭐ Kedvenc</button>
 </div>
 
 <!-- NAPLÓ -->
 <div id="nap" class="view">
  <textarea id="journal" placeholder="Írd le a napod..." oninput="countJournalChars()"></textarea>
-
- <div class="card" id="charInfo">
-  Karakterek: <b><span id="charCount">0</span> / 90</b>
- </div>
-
- <button class="secondary" id="saveJournalBtn" onclick="saveJournal()" disabled>
-  Mentés (min. 90 karakter)
- </button>
+ <div class="card">Karakterek: <b><span id="charCount">0</span> / 90</b></div>
+ <button class="secondary" id="saveJournalBtn" onclick="saveJournal()" disabled>Mentés</button>
 </div>
-
 
 <!-- SPORT -->
 <div id="sport" class="view">
- <select id="stype">
-  <option>Futás</option><option>Súlyzós</option>
- </select>
- <input type="range" min="5" max="180" value="30" oninput="stimeVal.innerText=this.value">
- <span id="stimeVal">30</span> perc
- <textarea id="snote"></textarea>
+ <select id="stype"><option>Futás</option><option>Súlyzós</option></select>
  <button class="secondary" onclick="saveSport()">Mentés</button>
 </div>
 
-<!-- KÖNYV -->
+<!-- BOOK -->
 <div id="book" class="view">
- <input id="btitle">
- <input type="range" min="1" max="200" value="20" oninput="bpageVal.innerText=this.value">
- <span id="bpageVal">20</span> oldal
+ <input id="btitle" placeholder="Könyv címe">
  <button class="secondary" onclick="saveBook()">Mentés</button>
-</div>
-
-<!-- KEDVENCEK -->
-<div id="fav" class="view">
- <div id="favQuotes"></div>
-</div>
-
-<!-- PROFIL -->
-<div id="profile" class="view">
- <input id="pname"><input id="plife">
 </div>
 
 <!-- STAT -->
 <div id="stat" class="view">
 
- <div class="tabs">
+ <div class="stat-tabs">
   <button id="weekBtn" class="active" onclick="switchStat('week')">Heti</button>
   <button id="yearBtn" onclick="switchStat('year')">Éves</button>
  </div>
@@ -197,16 +182,14 @@ button{
 </div>
 
 <script>
-if("serviceWorker"in navigator){
- navigator.serviceWorker.register("service-worker.js");
-}
-
 const quotes=[
  {a:"David Goggins",t:"A fájdalom ideiglenes.",i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
  {a:"Elon Musk",t:"Ha fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
 ];
 
 function tab(b,id){
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+ b.classList.add("active");
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  if(id==="stat")loadStats();
@@ -220,10 +203,18 @@ function newQuote(){
  dailyQuote.innerText=q.t+" – "+q.a;
 }
 
+function countJournalChars(){
+ const len=journal.value.length;
+ charCount.innerText=len;
+ saveJournalBtn.disabled=len<90;
+}
+
 function saveJournal(){
  let j=JSON.parse(localStorage.journal||"[]");
  j.push(journal.value);
  localStorage.journal=JSON.stringify(j);
+ journal.value="";
+ countJournalChars();
 }
 
 function saveSport(){
@@ -239,43 +230,36 @@ function saveBook(){
 }
 
 let statMode="week";
-function switchStat(m){statMode=m;loadStats();}
-
-function loadStats(){
- let j = JSON.parse(localStorage.journal || "[]");
- let s = JSON.parse(localStorage.sport || "[]");
- let b = JSON.parse(localStorage.book || "[]");
-
- statWrite.innerText = "Naplók: " + j.length;
- statSport.innerText = "Edzések: " + s.length;
- statBook.innerText  = "Könyvek: " + b.length;
-
- if(window.c) window.c.destroy();
-
- window.c = new Chart(statChart,{
-  type:"bar",
-  data:{
-   labels:["Napló","Edzés","Könyv"],
-   datasets:[{
-    data:[j.length, s.length, b.length]
-   }]
-  },
-  options:{
-   plugins:{
-    legend:{ display:false }
-   },
-   scales:{
-    y:{ beginAtZero:true }
-   }
-  }
- });
+function switchStat(m){
+ statMode=m;
+ weekBtn.classList.remove("active");
+ yearBtn.classList.remove("active");
+ (m==="week"?weekBtn:yearBtn).classList.add("active");
+ loadStats();
 }
 
+function loadStats(){
+ let j=JSON.parse(localStorage.journal||"[]");
+ let s=JSON.parse(localStorage.sport||"[]");
+ let b=JSON.parse(localStorage.book||"[]");
+
+ statWrite.innerText="📓 Naplók: "+j.length;
+ statSport.innerText="🏋️ Edzések: "+s.length;
+ statBook.innerText="📚 Könyvek: "+b.length;
+
+ if(window.c)window.c.destroy();
+ window.c=new Chart(statChart,{
+  type:"bar",
+  data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[j.length,s.length,b.length]}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+ });
+
+ statJournalList.innerHTML=j.map(x=>`<div class="card">${x}</div>`).join("");
+ statSportList.innerHTML=s.map(x=>`<div class="card">${x.type}</div>`).join("");
+ statBookList.innerHTML=b.map(x=>`<div class="card">${x.title}</div>`).join("");
+}
 
 newQuote();
 </script>
 </body>
 </html>
-
-
-
