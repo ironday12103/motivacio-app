@@ -187,13 +187,18 @@ const quotes=[
  {a:"Elon Musk",t:"Ha fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
 ];
 
-function tab(b,id){
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
- b.classList.add("active");
+function tab(btn,id){
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+ btn.classList.add("active");
+
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
  document.getElementById(id).classList.add("active");
- if(id==="stat")loadStats();
+
+ if(id==="stat"){
+  setTimeout(loadStats,100); // ⬅️ EZ A KULCS
+ }
 }
+
 
 function newQuote(){
  let q=quotes[Math.floor(Math.random()*quotes.length)];
@@ -210,12 +215,19 @@ function countJournalChars(){
 }
 
 function saveJournal(){
- let j=JSON.parse(localStorage.journal||"[]");
- j.push(journal.value);
- localStorage.journal=JSON.stringify(j);
+ if(journal.value.length < 90) return;
+
+ let j = JSON.parse(localStorage.getItem("journal") || "[]");
+ j.push({
+  text: journal.value,
+  date: new Date().toISOString()
+ });
+ localStorage.setItem("journal", JSON.stringify(j));
+
  journal.value="";
  countJournalChars();
 }
+
 
 function saveSport(){
  let s=JSON.parse(localStorage.sport||"[]");
@@ -239,27 +251,45 @@ function switchStat(m){
 }
 
 function loadStats(){
- let j=JSON.parse(localStorage.journal||"[]");
- let s=JSON.parse(localStorage.sport||"[]");
- let b=JSON.parse(localStorage.book||"[]");
 
- statWrite.innerText="📓 Naplók: "+j.length;
- statSport.innerText="🏋️ Edzések: "+s.length;
- statBook.innerText="📚 Könyvek: "+b.length;
+ const j = JSON.parse(localStorage.getItem("journal") || "[]");
+ const s = JSON.parse(localStorage.getItem("sport") || "[]");
+ const b = JSON.parse(localStorage.getItem("book") || "[]");
 
- if(window.c)window.c.destroy();
- window.c=new Chart(statChart,{
+ statWrite.innerText = "📓 Naplók: " + j.length;
+ statSport.innerText = "🏋️ Edzések: " + s.length;
+ statBook.innerText  = "📚 Könyvek: " + b.length;
+
+ const canvas = document.getElementById("statChart");
+ if(!canvas) return;
+
+ if(window.statChartObj){
+  window.statChartObj.destroy();
+ }
+
+ window.statChartObj = new Chart(canvas,{
   type:"bar",
-  data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[j.length,s.length,b.length]}]},
-  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  data:{
+   labels:["Napló","Edzés","Könyv"],
+   datasets:[{
+    data:[j.length, s.length, b.length]
+   }]
+  },
+  options:{
+   responsive:true,
+   plugins:{legend:{display:false}},
+   scales:{y:{beginAtZero:true}}
+  }
  });
 
- statJournalList.innerHTML=j.map(x=>`<div class="card">${x}</div>`).join("");
- statSportList.innerHTML=s.map(x=>`<div class="card">${x.type}</div>`).join("");
- statBookList.innerHTML=b.map(x=>`<div class="card">${x.title}</div>`).join("");
+ statJournalList.innerHTML = j.map(x=>`<div class="card">${x.text}</div>`).join("");
+ statSportList.innerHTML   = s.map(x=>`<div class="card">${x.type}</div>`).join("");
+ statBookList.innerHTML    = b.map(x=>`<div class="card">${x.title}</div>`).join("");
 }
+
 
 newQuote();
 </script>
 </body>
 </html>
+
