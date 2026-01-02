@@ -337,15 +337,48 @@ function loadFav(){
 
 /* STAT */
 function loadStats(){
- statWrite.innerText="📓 Naplók: "+JSON.parse(localStorage.getItem("journal")||"[]").length;
- statSport.innerText="🏋️ Edzések: "+JSON.parse(localStorage.getItem("sport")||"[]").length;
- statBook.innerText="📚 Könyvek: "+JSON.parse(localStorage.getItem("book")||"[]").length;
+ let journals = JSON.parse(localStorage.getItem("journal")||"[]");
+ let sports = JSON.parse(localStorage.getItem("sport")||"[]");
+ let books = JSON.parse(localStorage.getItem("book")||"[]");
+
+ statWrite.innerText="📓 Naplók: "+journals.length;
+ statSport.innerText="🏋️ Edzések: "+sports.length;
+ statBook.innerText="📚 Könyvek: "+books.length;
+
+ // Napló visszanézés
+ statJournalList.innerHTML="";
+ journals.forEach((j,i)=>{
+  let d=document.createElement("div");
+  d.className="card";
+  d.innerText=(i+1)+". "+j;
+  statJournalList.appendChild(d);
+ });
+
+ // Edzés visszanézés
+ statSportList.innerHTML="";
+ sports.forEach((s,i)=>{
+  let d=document.createElement("div");
+  d.className="card";
+  d.innerText=(i+1)+". "+s.type+" – "+s.time+" perc";
+  statSportList.appendChild(d);
+ });
+
+ // Könyv visszanézés
+ statBookList.innerHTML="";
+ books.forEach((b,i)=>{
+  let d=document.createElement("div");
+  d.className="card";
+  d.innerText=(i+1)+". "+b.title+" – "+b.pages+" oldal";
+  statBookList.appendChild(d);
+ });
 }
+
 
 newQuote();
 </script>
 
 </body>
 </html>
+
 
 
