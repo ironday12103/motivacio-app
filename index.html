@@ -135,6 +135,16 @@ img.thumb{
  border-radius:12px;
  margin-top:6px;
 }
+ .delBtn{
+ float:right;
+ background:#c62828;
+ color:#fff;
+ border:none;
+ border-radius:10px;
+ padding:4px 10px;
+ cursor:pointer;
+}
+
 </style>
 </head>
 
@@ -271,7 +281,30 @@ function newQuote(){
  authorTag.className = (q.a === "David Goggins") ? "author-goggins" : "";
 
  dailyQuote.innerText = q.t + " – " + q.a;
+}  // ✅ EZ HIÁNYZOTT
 
+
+newQuote();
+
+function delJournal(i){
+ let j = JSON.parse(localStorage.getItem("journal") || "[]");
+ j.splice(i,1);
+ localStorage.setItem("journal", JSON.stringify(j));
+ loadStats();
+}
+
+function delSport(i){
+ let s = JSON.parse(localStorage.getItem("sport") || "[]");
+ s.splice(i,1);
+ localStorage.setItem("sport", JSON.stringify(s));
+ loadStats();
+}
+
+function delBook(i){
+ let b = JSON.parse(localStorage.getItem("book") || "[]");
+ b.splice(i,1);
+ localStorage.setItem("book", JSON.stringify(b));
+ loadStats();
 }
 function addFavorite(){
  let fav = JSON.parse(localStorage.getItem("favQuotes") || "[]");
@@ -345,32 +378,43 @@ function loadStats(){
  statSport.innerText="🏋️ Edzések: "+sports.length;
  statBook.innerText="📚 Könyvek: "+books.length;
 
- // Napló visszanézés
- statJournalList.innerHTML="";
- journals.forEach((j,i)=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerText=(i+1)+". "+j;
-  statJournalList.appendChild(d);
- });
+// Napló visszanézés
+statJournalList.innerHTML="";
+journals.forEach((j,i)=>{
+ let d=document.createElement("div");
+ d.className="card";
+ d.innerHTML = `
+  ${j}
+  <button class="delBtn" onclick="delJournal(${i})">X</button>
+ `;
+ statJournalList.appendChild(d);
+});
+
 
  // Edzés visszanézés
  statSportList.innerHTML="";
- sports.forEach((s,i)=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerText=(i+1)+". "+s.type+" – "+s.time+" perc";
-  statSportList.appendChild(d);
- });
+sports.forEach((s,i)=>{
+ let d=document.createElement("div");
+ d.className="card";
+ d.innerHTML = `
+  <b>${s.type}</b> – ${s.time} perc
+  <button class="delBtn" onclick="delSport(${i})">X</button>
+ `;
+ statSportList.appendChild(d);
+});
+
 
  // Könyv visszanézés
- statBookList.innerHTML="";
- books.forEach((b,i)=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerText=(i+1)+". "+b.title+" – "+b.pages+" oldal";
-  statBookList.appendChild(d);
- });
+statBookList.innerHTML="";
+books.forEach((b,i)=>{
+ let d=document.createElement("div");
+ d.className="card";
+ d.innerHTML = `
+  <b>${b.title}</b> – ${b.pages} oldal
+  <button class="delBtn" onclick="delBook(${i})">X</button>
+ `;
+ statBookList.appendChild(d);
+});
 }
 
 
@@ -379,6 +423,7 @@ newQuote();
 
 </body>
 </html>
+
 
 
 
