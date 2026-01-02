@@ -216,11 +216,12 @@ img.thumb{
 
 <!-- STAT -->
 <div id="stat" class="view">
- <div class="stat-box" id="statWrite"></div>
- <div class="stat-box" id="statSport"></div>
- <div class="stat-box" id="statBook"></div>
+ <div class="tabs">
+  <button id="weekBtn" class="active" onclick="switchStat('week')">Heti teljesítmény</button>
+  <button id="yearBtn" onclick="switchStat('year')">Éves teljesítmény</button>
+</div>
 
- <canvas id="statChart" style="width:100%;max-height:260px;"></canvas>
+<canvas id="statChart" style="width:100%;max-height:260px;"></canvas>
 
  <!-- visszanézések maradnak -->
 </div>
@@ -472,6 +473,7 @@ newQuote();
 
 </body>
 </html>
+
 
 
 
