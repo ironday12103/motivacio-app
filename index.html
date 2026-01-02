@@ -44,6 +44,13 @@ body{
  background:#333;
  color:#fff;
  cursor:pointer;
+ }
+ .tabs button.active{
+ background:#ff9800;
+ color:#000;
+}
+ .tabs button{
+ font-size:13px;
 }
 .tabs button.active{background:#ff9800;color:#000;}
 .view{display:none;}
@@ -129,9 +136,17 @@ button{
 
 <!-- NAPLÓ -->
 <div id="nap" class="view">
- <textarea id="journal"></textarea>
- <button class="secondary" onclick="saveJournal()">Mentés</button>
+ <textarea id="journal" placeholder="Írd le a napod..." oninput="countJournalChars()"></textarea>
+
+ <div class="card" id="charInfo">
+  Karakterek: <b><span id="charCount">0</span> / 90</b>
+ </div>
+
+ <button class="secondary" id="saveJournalBtn" onclick="saveJournal()" disabled>
+  Mentés (min. 90 karakter)
+ </button>
 </div>
+
 
 <!-- SPORT -->
 <div id="sport" class="view">
@@ -249,3 +264,4 @@ newQuote();
 </script>
 </body>
 </html>
+
