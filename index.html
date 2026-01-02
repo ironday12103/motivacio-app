@@ -5,8 +5,10 @@
 <title>Motiváció App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- 🔴 MANIFEST BEKÖTVE -->
 <link rel="manifest" href="manifest.json">
+
+<!-- ✅ CHART.JS KÖTELEZŐ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
@@ -41,24 +43,14 @@ body{
  padding:10px;
  background:#333;
  color:#fff;
- font-size:14px;
  cursor:pointer;
 }
-.tabs button.active{
- background:#ff9800;
- color:#000;
-}
+.tabs button.active{background:#ff9800;color:#000;}
 .view{display:none;}
 .view.active{display:block;}
 
-.header-quote{
- text-align:center;
- font-size:14px;
- margin-bottom:8px;
- opacity:.9;
-}
+.header-quote{text-align:center;font-size:14px;margin-bottom:8px;opacity:.9;}
 
-/* MOTIVÁCIÓ */
 .motivation-card{
  background:linear-gradient(135deg,#ff9800,#ff5722,#9c27b0);
  border-radius:22px;
@@ -71,25 +63,18 @@ body{
  max-height:320px;
  object-fit:cover;
  border-radius:16px;
- margin-bottom:8px;
 }
 #authorTag{
  display:inline-block;
  padding:6px 14px;
  border-radius:16px;
  font-weight:bold;
- margin-bottom:6px;
- font-size:14px;
  background:#222;
  color:#ff9800;
+ margin-bottom:6px;
 }
 .author-goggins{background:#c62828;color:#fff;}
-
-.big-quote{
- font-size:26px;
- font-weight:bold;
- line-height:1.3;
-}
+.big-quote{font-size:26px;font-weight:bold;}
 
 input,textarea,select{
  width:100%;
@@ -97,7 +82,6 @@ input,textarea,select{
  border-radius:14px;
  border:none;
  margin-top:8px;
- font-size:15px;
 }
 textarea{min-height:140px;}
 
@@ -107,44 +91,13 @@ button{
  border:none;
  border-radius:14px;
  margin-top:8px;
- font-size:15px;
 }
 .main{background:#ff9800;color:#000;}
 .secondary{background:#333;color:#fff;}
 
-.card{
- background:#1d1d1d;
- border-radius:16px;
- padding:12px;
- margin-bottom:8px;
-}
-.stat-box{
- background:#222;
- border-radius:16px;
- padding:12px;
- margin-bottom:8px;
-}
-.fav-item{
- background:linear-gradient(135deg,#ff9800,#9c27b0);
- border-radius:12px;
- padding:10px;
- margin-bottom:6px;
-}
-img.thumb{
- width:100%;
- border-radius:12px;
- margin-top:6px;
-}
- .delBtn{
- float:right;
- background:#c62828;
- color:#fff;
- border:none;
- border-radius:10px;
- padding:4px 10px;
- cursor:pointer;
-}
-
+.card{background:#1d1d1d;border-radius:16px;padding:12px;margin-bottom:8px;}
+.stat-box{background:#222;border-radius:16px;padding:12px;margin-bottom:8px;}
+.delBtn{float:right;background:#c62828;color:#fff;border:none;border-radius:10px;padding:4px 10px;}
 </style>
 </head>
 
@@ -163,6 +116,7 @@ img.thumb{
 
 <div class="header-quote" id="dailyQuote"></div>
 
+<!-- MOTIVÁCIÓ -->
 <div id="mot" class="view active">
  <div class="motivation-card">
   <img id="motImg">
@@ -170,315 +124,128 @@ img.thumb{
   <div class="big-quote" id="quote"></div>
  </div>
  <button class="main" onclick="newQuote()">Új motiváció</button>
- <button class="secondary" onclick="addFavorite()">⭐ Kedvenc idézet</button>
+ <button class="secondary" onclick="addFavorite()">⭐ Kedvenc</button>
 </div>
 
+<!-- NAPLÓ -->
 <div id="nap" class="view">
- <textarea id="journal" placeholder="Írd le a napod..."></textarea>
+ <textarea id="journal"></textarea>
  <button class="secondary" onclick="saveJournal()">Mentés</button>
 </div>
 
+<!-- SPORT -->
 <div id="sport" class="view">
  <select id="stype">
-  <option>Futás</option>
-  <option>Súlyzós edzés</option>
-  <option>Kerékpár</option>
-  <option>Úszás</option>
+  <option>Futás</option><option>Súlyzós</option>
  </select>
- <label>Időtartam: <b><span id="stimeVal">30</span> perc</b></label>
  <input type="range" min="5" max="180" value="30" oninput="stimeVal.innerText=this.value">
- <textarea id="snote" placeholder="Megjegyzés"></textarea>
- <button class="secondary" onclick="saveSport()">Edzés mentése</button>
+ <span id="stimeVal">30</span> perc
+ <textarea id="snote"></textarea>
+ <button class="secondary" onclick="saveSport()">Mentés</button>
 </div>
 
+<!-- KÖNYV -->
 <div id="book" class="view">
- <input id="btitle" placeholder="Könyv címe">
- <label>Olvasott oldalak: <b><span id="bpageVal">20</span></b></label>
+ <input id="btitle">
  <input type="range" min="1" max="200" value="20" oninput="bpageVal.innerText=this.value">
- <button class="secondary" onclick="saveBook()">Könyv mentése</button>
+ <span id="bpageVal">20</span> oldal
+ <button class="secondary" onclick="saveBook()">Mentés</button>
 </div>
 
+<!-- KEDVENCEK -->
 <div id="fav" class="view">
- <div class="card"><b>🔥 Kedvenc idézetek</b></div>
  <div id="favQuotes"></div>
-
- <div class="card"><b>🏋️ Kedvenc edzések</b></div>
- <div id="favSports"></div>
-
- <div class="card"><b>📚 Kedvenc könyvek</b></div>
- <div id="favBooks"></div>
 </div>
 
+<!-- PROFIL -->
 <div id="profile" class="view">
- <input id="pname" placeholder="Neved">
- <input id="plife" placeholder="Életcélod">
+ <input id="pname"><input id="plife">
 </div>
 
 <!-- STAT -->
 <div id="stat" class="view">
+
  <div class="tabs">
-  <button id="weekBtn" class="active" onclick="switchStat('week')">Heti teljesítmény</button>
-  <button id="yearBtn" onclick="switchStat('year')">Éves teljesítmény</button>
+  <button id="weekBtn" class="active" onclick="switchStat('week')">Heti</button>
+  <button id="yearBtn" onclick="switchStat('year')">Éves</button>
+ </div>
+
+ <canvas id="statChart"></canvas>
+
+ <div class="stat-box" id="statWrite"></div>
+ <div class="stat-box" id="statSport"></div>
+ <div class="stat-box" id="statBook"></div>
+
+ <div class="card"><b>Naplók</b><div id="statJournalList"></div></div>
+ <div class="card"><b>Edzések</b><div id="statSportList"></div></div>
+ <div class="card"><b>Könyvek</b><div id="statBookList"></div></div>
 </div>
-
-<canvas id="statChart" style="width:100%;max-height:260px;"></canvas>
-
- <!-- visszanézések maradnak -->
-</div>
-
-
- <!-- VISSZANÉZÉS -->
- <div class="card">
-  <b>📓 Napló visszanézés</b>
-  <div id="statJournalList"></div>
- </div>
-
- <div class="card">
-  <b>🏋️ Edzések visszanézés</b>
-  <div id="statSportList"></div>
- </div>
-
- <div class="card">
-  <b>📚 Könyvek visszanézés</b>
-  <div id="statBookList"></div>
- </div>
-
 
 </div>
 
 <script>
-/* 🔴 SERVICE WORKER REGISZTRÁCIÓ */
-if ("serviceWorker" in navigator) {
+if("serviceWorker"in navigator){
  navigator.serviceWorker.register("service-worker.js");
 }
 
-/* ===== IDÉZETEK (50) ===== */
-const quotes = [
- {a:"David Goggins",t:"A fájdalom ideiglenes, a büszkeség örök.",i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
- {a:"Elon Musk",t:"Ha elég fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"},
- {a:"Kobe Bryant",t:"Dolgozz, amikor más pihen.",i:"https://images.unsplash.com/photo-1504457047772-27faf1c00561"},
- {a:"Marcus Aurelius",t:"Az akadály maga az út.",i:"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"},
- {a:"Bruce Lee",t:"Légy víz.",i:"https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"},
- {a:"Arnold Schwarzenegger",t:"Soha ne add fel.",i:"https://images.unsplash.com/photo-1558611848-73f7eb4001a1"},
- {a:"Steve Jobs",t:"Maradj éhes.",i:"https://images.unsplash.com/photo-1492724441997-5dc865305da7"},
- {a:"Jocko Willink",t:"A fegyelem szabadság.",i:"https://images.unsplash.com/photo-1500534314209-a26db0f5b553"},
- {a:"Jim Rohn",t:"A siker szokás.",i:"https://images.unsplash.com/photo-1498050108023-c5249f4df085"},
- {a:"Tony Robbins",t:"A döntés az erő.",i:"https://images.unsplash.com/photo-1500534314209-a26db0f5b553"}
+const quotes=[
+ {a:"David Goggins",t:"A fájdalom ideiglenes.",i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
+ {a:"Elon Musk",t:"Ha fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
 ];
 
-/* NAV */
-function tab(btn,id){
- document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
- btn.classList.add("active");
+function tab(b,id){
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
  document.getElementById(id).classList.add("active");
- if(id==="fav")loadFav();
  if(id==="stat")loadStats();
 }
 
-/* MOTIVÁCIÓ */
 function newQuote(){
- let q = quotes[Math.floor(Math.random() * quotes.length)];
-
- quote.innerText = q.t;
- motImg.src = q.i;
- motImg.alt = q.a;
-
- authorTag.innerText = q.a;
- authorTag.className = (q.a === "David Goggins") ? "author-goggins" : "";
-
- dailyQuote.innerText = q.t + " – " + q.a;
-}  // ✅ EZ HIÁNYZOTT
-
-
-/* ❌ TÖRLÉS FÜGGVÉNYEK */
-function delJournal(i){
- let j = JSON.parse(localStorage.getItem("journal") || "[]");
- j.splice(i,1);
- localStorage.setItem("journal", JSON.stringify(j));
- loadStats();
+ let q=quotes[Math.floor(Math.random()*quotes.length)];
+ quote.innerText=q.t;
+ motImg.src=q.i;
+ authorTag.innerText=q.a;
+ dailyQuote.innerText=q.t+" – "+q.a;
 }
 
-function delSport(i){
- let s = JSON.parse(localStorage.getItem("sport") || "[]");
- s.splice(i,1);
- localStorage.setItem("sport", JSON.stringify(s));
- loadStats();
-}
-
-function delBook(i){
- let b = JSON.parse(localStorage.getItem("book") || "[]");
- b.splice(i,1);
- localStorage.setItem("book", JSON.stringify(b));
- loadStats();
-}
-function addFavorite(){
- let fav = JSON.parse(localStorage.getItem("favQuotes") || "[]");
-
- fav.push({
-   text: quote.innerText,
-   author: authorTag.innerText
- });
-
- localStorage.setItem("favQuotes", JSON.stringify(fav));
- alert("⭐ Kedvenc idézet elmentve");
-
-}
-
-/* NAPLÓ */
 function saveJournal(){
- let j=JSON.parse(localStorage.getItem("journal")||"[]");
+ let j=JSON.parse(localStorage.journal||"[]");
  j.push(journal.value);
- localStorage.setItem("journal",JSON.stringify(j));
+ localStorage.journal=JSON.stringify(j);
 }
 
-/* SPORT */
 function saveSport(){
- let s=JSON.parse(localStorage.getItem("sport")||"[]");
- s.push({type:stype.value,time:stimeVal.innerText,note:snote.value});
- localStorage.setItem("sport",JSON.stringify(s));
+ let s=JSON.parse(localStorage.sport||"[]");
+ s.push({type:stype.value});
+ localStorage.sport=JSON.stringify(s);
 }
 
-/* BOOK */
 function saveBook(){
- let b=JSON.parse(localStorage.getItem("book")||"[]");
- b.push({title:btitle.value,pages:bpageVal.innerText});
- localStorage.setItem("book",JSON.stringify(b));
+ let b=JSON.parse(localStorage.book||"[]");
+ b.push({title:btitle.value});
+ localStorage.book=JSON.stringify(b);
 }
 
-/* FAV */
-function loadFav(){
- favQuotes.innerHTML="";
- favSports.innerHTML="";
- favBooks.innerHTML="";
-
- JSON.parse(localStorage.getItem("favQuotes")||"[]").forEach(q=>{
-  let d=document.createElement("div");
-  d.className="fav-item";
-  d.innerText=q.t+" – "+q.a;
-  favQuotes.appendChild(d);
- });
-
- JSON.parse(localStorage.getItem("sport")||"[]").forEach(s=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerText=s.type+" – "+s.time+" perc";
-  favSports.appendChild(d);
- });
-
- JSON.parse(localStorage.getItem("book")||"[]").forEach(b=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerText=b.title+" – "+b.pages+" oldal";
-  favBooks.appendChild(d);
- });
-}
-
-/* STAT */
-let statMode = "week";
-
-function switchStat(mode){
- statMode = mode;
-
- document.getElementById("weekBtn").classList.remove("active");
- document.getElementById("yearBtn").classList.remove("active");
-
- if(mode==="week"){
-  document.getElementById("weekBtn").classList.add("active");
- }else{
-  document.getElementById("yearBtn").classList.add("active");
- }
-
- loadStats();
-}
+let statMode="week";
+function switchStat(m){statMode=m;loadStats();}
 
 function loadStats(){
+ let j=JSON.parse(localStorage.journal||"[]");
+ let s=JSON.parse(localStorage.sport||"[]");
+ let b=JSON.parse(localStorage.book||"[]");
 
- let journals = JSON.parse(localStorage.getItem("journal")||"[]");
- let sports   = JSON.parse(localStorage.getItem("sport")||"[]");
- let books    = JSON.parse(localStorage.getItem("book")||"[]");
+ statWrite.innerText="Naplók: "+j.length;
+ statSport.innerText="Edzések: "+s.length;
+ statBook.innerText="Könyvek: "+b.length;
 
- statWrite.innerText="📓 Naplók: "+journals.length;
- statSport.innerText="🏋️ Edzések: "+sports.length;
- statBook.innerText="📚 Könyvek: "+books.length;
-
- let dataSet;
-
- if(statMode==="week"){
-  dataSet = [
-   journals.slice(-7).length,
-   sports.slice(-7).length,
-   books.slice(-7).length
-  ];
- }else{
-  dataSet = [
-   journals.length,
-   sports.length,
-   books.length
-  ];
- }
-
- if(window.statChartObj){
-  window.statChartObj.destroy();
- }
-
- const ctx = document.getElementById("statChart");
- window.statChartObj = new Chart(ctx,{
+ if(window.c)window.c.destroy();
+ window.c=new Chart(statChart,{
   type:"bar",
-  data:{
-   labels:["Napló","Edzés","Könyv"],
-   datasets:[{
-    data:dataSet
-   }]
-  },
-  options:{
-   responsive:true,
-   plugins:{legend:{display:false}},
-   scales:{y:{beginAtZero:true}}
-  }
- });
-
- /* 📓 Napló visszanézés */
- statJournalList.innerHTML="";
- journals.forEach((j,i)=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerHTML=`${j}<button class="delBtn" onclick="delJournal(${i})">X</button>`;
-  statJournalList.appendChild(d);
- });
-
- /* 🏋️ Edzés */
- statSportList.innerHTML="";
- sports.forEach((s,i)=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerHTML=`<b>${s.type}</b> – ${s.time} perc
-  <button class="delBtn" onclick="delSport(${i})">X</button>`;
-  statSportList.appendChild(d);
- });
-
- /* 📚 Könyv */
- statBookList.innerHTML="";
- books.forEach((b,i)=>{
-  let d=document.createElement("div");
-  d.className="card";
-  d.innerHTML=`<b>${b.title}</b> – ${b.pages} oldal
-  <button class="delBtn" onclick="delBook(${i})">X</button>`;
-  statBookList.appendChild(d);
+  data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[j.length,s.length,b.length]}]},
+  options:{plugins:{legend:{display:false}}}
  });
 }
 
 newQuote();
 </script>
-
 </body>
 </html>
-
-
-
-
-
-
-
-
-
