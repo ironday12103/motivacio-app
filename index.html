@@ -41,7 +41,6 @@ body{
  padding:10px;
  background:#333;
  color:#fff;
- cursor:pointer;
  font-size:13px;
 }
 .tabs button.active{
@@ -67,6 +66,12 @@ body{
 .stat-tabs button.active{
  background:#ff9800;
  color:#000;
+}
+
+#statChart{
+ width:100%;
+ height:240px;
+ display:block;
 }
 
 .header-quote{text-align:center;font-size:14px;margin-bottom:8px;opacity:.9;}
@@ -131,7 +136,6 @@ button{
 
 <div class="header-quote" id="dailyQuote"></div>
 
-<!-- MOTIVÁCIÓ -->
 <div id="mot" class="view active">
  <div class="motivation-card">
   <img id="motImg">
@@ -141,28 +145,23 @@ button{
  <button class="main" onclick="newQuote()">Új motiváció</button>
 </div>
 
-<!-- NAPLÓ -->
 <div id="nap" class="view">
  <textarea id="journal" placeholder="Írd le a napod..." oninput="countJournalChars()"></textarea>
  <div class="card">Karakterek: <b><span id="charCount">0</span> / 90</b></div>
  <button class="secondary" id="saveJournalBtn" onclick="saveJournal()" disabled>Mentés</button>
 </div>
 
-<!-- SPORT -->
 <div id="sport" class="view">
  <select id="stype"><option>Futás</option><option>Súlyzós</option></select>
  <button class="secondary" onclick="saveSport()">Mentés</button>
 </div>
 
-<!-- BOOK -->
 <div id="book" class="view">
  <input id="btitle" placeholder="Könyv címe">
  <button class="secondary" onclick="saveBook()">Mentés</button>
 </div>
 
-<!-- STAT -->
 <div id="stat" class="view">
-
  <div class="stat-tabs">
   <button id="weekBtn" class="active" onclick="switchStat('week')">Heti</button>
   <button id="yearBtn" onclick="switchStat('year')">Éves</button>
@@ -190,20 +189,14 @@ const quotes=[
 let statMode="week";
 let statChartObj=null;
 
-/* TAB VÁLTÁS */
 function tab(btn,id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
  btn.classList.add("active");
-
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
  document.getElementById(id).classList.add("active");
-
- if(id==="stat"){
-  setTimeout(loadStats,100);
- }
+ if(id==="stat") setTimeout(loadStats,200);
 }
 
-/* MOTIVÁCIÓ */
 function newQuote(){
  let q=quotes[Math.floor(Math.random()*quotes.length)];
  quote.innerText=q.t;
@@ -212,93 +205,66 @@ function newQuote(){
  dailyQuote.innerText=q.t+" – "+q.a;
 }
 
-/* NAPLÓ KARAKTER */
 function countJournalChars(){
- const len=journal.value.length;
- charCount.innerText=len;
- saveJournalBtn.disabled = len < 90;
+ charCount.innerText=journal.value.length;
+ saveJournalBtn.disabled = journal.value.length < 90;
 }
 
-/* NAPLÓ MENTÉS */
 function saveJournal(){
- if(journal.value.length < 90) return;
-
- let j = JSON.parse(localStorage.getItem("journal") || "[]");
- j.push({text: journal.value, date: Date.now()});
- localStorage.setItem("journal", JSON.stringify(j));
-
+ if(journal.value.length<90) return;
+ let j=JSON.parse(localStorage.journal||"[]");
+ j.push({text:journal.value,date:Date.now()});
+ localStorage.journal=JSON.stringify(j);
  journal.value="";
  countJournalChars();
- loadStats();
 }
 
-/* SPORT */
 function saveSport(){
- let s = JSON.parse(localStorage.getItem("sport") || "[]");
- s.push({type: stype.value, date: Date.now()});
- localStorage.setItem("sport", JSON.stringify(s));
- loadStats();
+ let s=JSON.parse(localStorage.sport||"[]");
+ s.push({type:stype.value,date:Date.now()});
+ localStorage.sport=JSON.stringify(s);
 }
 
-/* BOOK */
 function saveBook(){
- let b = JSON.parse(localStorage.getItem("book") || "[]");
- b.push({title: btitle.value, date: Date.now()});
- localStorage.setItem("book", JSON.stringify(b));
- loadStats();
+ let b=JSON.parse(localStorage.book||"[]");
+ b.push({title:btitle.value,date:Date.now()});
+ localStorage.book=JSON.stringify(b);
 }
 
-/* STAT MÓD */
 function switchStat(m){
  statMode=m;
- weekBtn.classList.remove("active");
- yearBtn.classList.remove("active");
- (m==="week"?weekBtn:yearBtn).classList.add("active");
+ weekBtn.classList.toggle("active",m==="week");
+ yearBtn.classList.toggle("active",m==="year");
  loadStats();
 }
 
-/* STAT */
 function loadStats(){
- const now = Date.now();
- const week = 7*24*60*60*1000;
+ const now=Date.now(),week=7*864e5;
+ const j=JSON.parse(localStorage.journal||"[]");
+ const s=JSON.parse(localStorage.sport||"[]");
+ const b=JSON.parse(localStorage.book||"[]");
 
- const j = JSON.parse(localStorage.getItem("journal") || "[]");
- const s = JSON.parse(localStorage.getItem("sport") || "[]");
- const b = JSON.parse(localStorage.getItem("book") || "[]");
-
- const jf = statMode==="week" ? j.filter(x=>now-x.date<week) : j;
- const sf = statMode==="week" ? s.filter(x=>now-x.date<week) : s;
- const bf = statMode==="week" ? b.filter(x=>now-x.date<week) : b;
+ const jf=statMode==="week"?j.filter(x=>now-x.date<week):j;
+ const sf=statMode==="week"?s.filter(x=>now-x.date<week):s;
+ const bf=statMode==="week"?b.filter(x=>now-x.date<week):b;
 
  statWrite.innerText=`📓 Naplók: ${jf.length}`;
  statSport.innerText=`🏋️ Edzések: ${sf.length}`;
  statBook.innerText=`📚 Könyvek: ${bf.length}`;
 
  if(statChartObj) statChartObj.destroy();
-
- statChartObj = new Chart(statChart,{
+ statChartObj=new Chart(statChart,{
   type:"bar",
-  data:{
-   labels:["Napló","Edzés","Könyv"],
-   datasets:[{ data:[jf.length,sf.length,bf.length] }]
-  },
-  options:{
-   responsive:true,
-   plugins:{legend:{display:false}},
-   scales:{y:{beginAtZero:true}}
-  }
+  data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length]}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
  });
 
- statJournalList.innerHTML = jf.map(x=>`<div class="card">${x.text}</div>`).join("");
- statSportList.innerHTML   = sf.map(x=>`<div class="card">${x.type}</div>`).join("");
- statBookList.innerHTML    = bf.map(x=>`<div class="card">${x.title}</div>`).join("");
+ statJournalList.innerHTML=jf.map(x=>`<div class="card">${x.text}</div>`).join("");
+ statSportList.innerHTML=sf.map(x=>`<div class="card">${x.type}</div>`).join("");
+ statBookList.innerHTML=bf.map(x=>`<div class="card">${x.title}</div>`).join("");
 }
-
-
 
 newQuote();
 </script>
 </body>
 </html>
-
-
