@@ -187,6 +187,10 @@ const quotes=[
  {a:"Elon Musk",t:"Ha fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
 ];
 
+let statMode="week";
+let statChartObj=null;
+
+/* TAB VÁLTÁS */
 function tab(btn,id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
  btn.classList.add("active");
@@ -195,11 +199,11 @@ function tab(btn,id){
  document.getElementById(id).classList.add("active");
 
  if(id==="stat"){
-  setTimeout(loadStats,100); // ⬅️ EZ A KULCS
+  setTimeout(loadStats,100);
  }
 }
 
-
+/* MOTIVÁCIÓ */
 function newQuote(){
  let q=quotes[Math.floor(Math.random()*quotes.length)];
  quote.innerText=q.t;
@@ -208,40 +212,43 @@ function newQuote(){
  dailyQuote.innerText=q.t+" – "+q.a;
 }
 
+/* NAPLÓ KARAKTER */
 function countJournalChars(){
  const len=journal.value.length;
  charCount.innerText=len;
- saveJournalBtn.disabled=len<90;
+ saveJournalBtn.disabled = len < 90;
 }
 
+/* NAPLÓ MENTÉS */
 function saveJournal(){
  if(journal.value.length < 90) return;
 
  let j = JSON.parse(localStorage.getItem("journal") || "[]");
- j.push({
-  text: journal.value,
-  date: new Date().toISOString()
- });
+ j.push({text: journal.value, date: Date.now()});
  localStorage.setItem("journal", JSON.stringify(j));
 
  journal.value="";
  countJournalChars();
+ loadStats();
 }
 
-
+/* SPORT */
 function saveSport(){
- let s=JSON.parse(localStorage.sport||"[]");
- s.push({type:stype.value});
- localStorage.sport=JSON.stringify(s);
+ let s = JSON.parse(localStorage.getItem("sport") || "[]");
+ s.push({type: stype.value, date: Date.now()});
+ localStorage.setItem("sport", JSON.stringify(s));
+ loadStats();
 }
 
+/* BOOK */
 function saveBook(){
- let b=JSON.parse(localStorage.book||"[]");
- b.push({title:btitle.value});
- localStorage.book=JSON.stringify(b);
+ let b = JSON.parse(localStorage.getItem("book") || "[]");
+ b.push({title: btitle.value, date: Date.now()});
+ localStorage.setItem("book", JSON.stringify(b));
+ loadStats();
 }
 
-let statMode="week";
+/* STAT MÓD */
 function switchStat(m){
  statMode=m;
  weekBtn.classList.remove("active");
@@ -250,30 +257,30 @@ function switchStat(m){
  loadStats();
 }
 
+/* STAT */
 function loadStats(){
+ const now = Date.now();
+ const week = 7*24*60*60*1000;
 
  const j = JSON.parse(localStorage.getItem("journal") || "[]");
  const s = JSON.parse(localStorage.getItem("sport") || "[]");
  const b = JSON.parse(localStorage.getItem("book") || "[]");
 
- statWrite.innerText = "📓 Naplók: " + j.length;
- statSport.innerText = "🏋️ Edzések: " + s.length;
- statBook.innerText  = "📚 Könyvek: " + b.length;
+ const jf = statMode==="week" ? j.filter(x=>now-x.date<week) : j;
+ const sf = statMode==="week" ? s.filter(x=>now-x.date<week) : s;
+ const bf = statMode==="week" ? b.filter(x=>now-x.date<week) : b;
 
- const canvas = document.getElementById("statChart");
- if(!canvas) return;
+ statWrite.innerText=`📓 Naplók: ${jf.length}`;
+ statSport.innerText=`🏋️ Edzések: ${sf.length}`;
+ statBook.innerText=`📚 Könyvek: ${bf.length}`;
 
- if(window.statChartObj){
-  window.statChartObj.destroy();
- }
+ if(statChartObj) statChartObj.destroy();
 
- window.statChartObj = new Chart(canvas,{
+ statChartObj = new Chart(statChart,{
   type:"bar",
   data:{
    labels:["Napló","Edzés","Könyv"],
-   datasets:[{
-    data:[j.length, s.length, b.length]
-   }]
+   datasets:[{ data:[jf.length,sf.length,bf.length] }]
   },
   options:{
    responsive:true,
@@ -282,14 +289,16 @@ function loadStats(){
   }
  });
 
- statJournalList.innerHTML = j.map(x=>`<div class="card">${x.text}</div>`).join("");
- statSportList.innerHTML   = s.map(x=>`<div class="card">${x.type}</div>`).join("");
- statBookList.innerHTML    = b.map(x=>`<div class="card">${x.title}</div>`).join("");
+ statJournalList.innerHTML = jf.map(x=>`<div class="card">${x.text}</div>`).join("");
+ statSportList.innerHTML   = sf.map(x=>`<div class="card">${x.type}</div>`).join("");
+ statBookList.innerHTML    = bf.map(x=>`<div class="card">${x.title}</div>`).join("");
 }
+
 
 
 newQuote();
 </script>
 </body>
 </html>
+
 
