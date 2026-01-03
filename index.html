@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+/* Alap stílusok */
 body{
  margin:0;
  background:#000;
@@ -28,6 +29,7 @@ body{
  padding:18px;
  box-shadow:0 0 40px rgba(0,0,0,.9);
  overflow:auto;
+ position:relative;
 }
 .tabs{
  display:flex;
@@ -130,6 +132,53 @@ button{
 .small-btn{flex:1;padding:8px;border-radius:10px;font-size:13px;}
 .small-danger{background:#b00020;color:#fff;}
 .small-secondary{background:#333;color:#fff;}
+
+/* Modal stílusok */
+.modal-backdrop{
+ position:fixed;
+ left:0;top:0;right:0;bottom:0;
+ background:rgba(0,0,0,0.6);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ z-index:2000;
+}
+.modal{
+ background:#111;
+ border-radius:12px;
+ padding:16px;
+ width:92%;
+ max-width:420px;
+ box-shadow:0 8px 24px rgba(0,0,0,0.6);
+}
+.modal header{font-weight:bold;margin-bottom:8px;}
+.modal .row{margin-top:8px;}
+.modal .actions{display:flex;gap:8px;margin-top:12px;}
+.modal .actions button{flex:1}
+
+/* Undo bar */
+#undoBar{
+ position:fixed;
+ left:50%;
+ transform:translateX(-50%);
+ bottom:18px;
+ background:#222;
+ color:#fff;
+ padding:10px 12px;
+ border-radius:12px;
+ display:flex;
+ gap:8px;
+ align-items:center;
+ z-index:3000;
+ box-shadow:0 8px 20px rgba(0,0,0,0.6);
+ display:none;
+}
+#undoBar button{width:auto;padding:8px 10px;border-radius:10px}
+
+/* Export/Import area */
+.io-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.io-actions button{flex:1;padding:10px;border-radius:10px}
+.file-input{display:none}
 </style>
 </head>
 
@@ -183,33 +232,139 @@ button{
  <div class="stat-box" id="statSport"></div>
  <div class="stat-box" id="statBook"></div>
 
- <div class="card"><b>Naplók</b><div id="statJournalList"></div></div>
- <div class="card"><b>Edzések</b><div id="statSportList"></div></div>
- <div class="card"><b>Könyvek</b><div id="statBookList"></div></div>
+ <div class="card">
+  <b>Naplók</b>
+  <div id="statJournalList"></div>
+ </div>
+ <div class="card">
+  <b>Edzések</b>
+  <div id="statSportList"></div>
+ </div>
+ <div class="card">
+  <b>Könyvek</b>
+  <div id="statBookList"></div>
+ </div>
+
+ <div class="card">
+  <b>Adatok (Export / Import)</b>
+  <div class="io-actions">
+   <button id="exportBtn" class="secondary">Exportálás JSON</button>
+   <button id="importBtn" class="secondary">Importálás JSON</button>
+   <input id="fileInput" class="file-input" type="file" accept="application/json">
+  </div>
+ </div>
 </div>
 
+</div>
+
+<!-- Modal (rejtett) -->
+<div id="modalBackdrop" class="modal-backdrop" style="display:none">
+ <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <header id="modalTitle">Szerkesztés</header>
+  <div id="modalBody">
+   <!-- Dinamikus tartalom -->
+   <div class="row" id="modalFieldJournal" style="display:none">
+    <label for="modalJournal">Napló</label>
+    <textarea id="modalJournal" rows="6"></textarea>
+    <div class="card">Karakterek: <b><span id="modalCharCount">0</span> / 90</b></div>
+   </div>
+
+   <div class="row" id="modalFieldSport" style="display:none">
+    <label for="modalSportType">Edzés típus</label>
+    <input id="modalSportType" />
+   </div>
+
+   <div class="row" id="modalFieldBook" style="display:none">
+    <label for="modalBookTitle">Könyv címe</label>
+    <input id="modalBookTitle" />
+   </div>
+  </div>
+
+  <div class="actions">
+   <button id="modalSaveBtn" class="main">Mentés</button>
+   <button id="modalCancelBtn" class="secondary">Mégse</button>
+  </div>
+ </div>
+</div>
+
+<!-- Undo bar -->
+<div id="undoBar">
+ <span id="undoMsg">Bejegyzés törölve</span>
+ <button id="undoBtn" class="main">Visszaállít</button>
+ <button id="undoDismiss" class="secondary">Bezár</button>
 </div>
 
 <script>
 /*
- Véglegesített fájl a kért javításokkal:
- - explicit DOM lekérés
- - event listenerek (nincs inline onclick)
- - szerkesztés/törlés funkciók
- - weekly/year stat szűréskor is helyes szerkesztés/törlés: az eredeti tömb indexét (_idx) adjuk át
- - localStorage getItem/setItem
- - XSS elleni escape, date formatting, kép fallback
+  Új verzió:
+  - 50 motivációs idézet bővítve
+  - Modal szerkesztés (prompt helyett)
+  - Export / Import JSON
+  - Undo (törlés visszavonás) ideiglenes sávval
+  - Megtartva: explicit DOM lekérések, _idx megoldás stat szűrésnél, XSS escape, date formatting
 */
 
 const quotes = [
- {a:"David Goggins", t:"A fájdalom ideiglenes.", i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
- {a:"Elon Musk", t:"Ha fontos, megcsinálod.", i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
+ {a:"David Goggins", t:"A fájdalom ideiglenes.", i:"https://picsum.photos/800/400?random=1"},
+ {a:"Elon Musk", t:"Ha fontos, megcsinálod.", i:"https://picsum.photos/800/400?random=2"},
+ {a:"Nelson Mandela", t:"Mindig úgy tűnik lehetetlennek, amíg meg nem csinálod.", i:"https://picsum.photos/800/400?random=3"},
+ {a:"Winston Churchill", t:"Soha ne add fel.", i:"https://picsum.photos/800/400?random=4"},
+ {a:"Confucius", t:"A legtávolabbi utazás is egy lépéssel kezdődik.", i:"https://picsum.photos/800/400?random=5"},
+ {a:"Eleanor Roosevelt", t:"Ne félj megpróbálni.", i:"https://picsum.photos/800/400?random=6"},
+ {a:"Steve Jobs", t:"Az életedet az határozza meg, amit teszel, nem az, amit mondasz.", i:"https://picsum.photos/800/400?random=7"},
+ {a:"Albert Einstein", t:"Próbálj meg mindig jobb lenni.", i:"https://picsum.photos/800/400?random=8"},
+ {a:"Mark Twain", t:"Az odaérés titka az, hogy elindulsz.", i:"https://picsum.photos/800/400?random=9"},
+ {a:"Henry Ford", t:"Ha azt hiszed, hogy képes vagy rá, már félig kész vagy.", i:"https://picsum.photos/800/400?random=10"},
+ {a:"Mahatma Gandhi", t:"Legyél te a változás, amit látni szeretnél a világban.", i:"https://picsum.photos/800/400?random=11"},
+ {a:"Bruce Lee", t:"Ne legyenek korlátaid, csak céljaid.", i:"https://picsum.photos/800/400?random=12"},
+ {a:"Confucius", t:"A tanulás soha nem fárasztó, csak a tudatlanság fárasztó.", i:"https://picsum.photos/800/400?random=13"},
+ {a:"Theodore Roosevelt", t:"Sok ember kudarcot vall, mert eltökélték, hogy keveset fognak tenni.", i:"https://picsum.photos/800/400?random=14"},
+ {a:"Vince Lombardi", t:"A győzelem nem minden, de a győzni akarás igen.", i:"https://picsum.photos/800/400?random=15"},
+ {a:"Oprah Winfrey", t:"A legnagyobb kaland az, hogy megtaláld valódi önmagad.", i:"https://picsum.photos/800/400?random=16"},
+ {a:"Les Brown", t:"Céljaid határozzák meg jövődet.", i:"https://picsum.photos/800/400?random=17"},
+ {a:"Jim Rohn", t:"A siker nem véletlen, hanem szokások eredménye.", i:"https://picsum.photos/800/400?random=18"},
+ {a:"Tony Robbins", t:"A cselekvés a kulcs minden sikerhez.", i:"https://picsum.photos/800/400?random=19"},
+ {a:"Buddha", t:"Minden pillanat egy új kezdet lehet.", i:"https://picsum.photos/800/400?random=20"},
+ {a:"Paulo Coelho", t:"Az élet mindig ad második esélyt: hívják ma napnak.", i:"https://picsum.photos/800/400?random=21"},
+ {a:"J. K. Rowling", t:"A kudarcok a siker alapanyagai.", i:"https://picsum.photos/800/400?random=22"},
+ {a:"Michael Jordan", t:"Aki feladja, soha nem fogja megtudni.", i:"https://picsum.photos/800/400?random=23"},
+ {a:"Soren Kierkegaard", t:"Az életet hátrafelé kell megérteni, de előrefelé élni.", i:"https://picsum.photos/800/400?random=24"},
+ {a:"Amelia Earhart", t:"A lehetőségeid határozzák meg jövődet, ne féld őket használni.", i:"https://picsum.photos/800/400?random=25"},
+ {a:"Arnold Schwarzenegger", t:"Álmodj nagyot, dolgozz keményen.", i:"https://picsum.photos/800/400?random=26"},
+ {a:"Ralph Waldo Emerson", t:"A bátorság nem a félelem hiánya, hanem tettek a félelem ellenére.", i:"https://picsum.photos/800/400?random=27"},
+ {a:"Helen Keller", t:"A legnagyobb hátrányod lehet a legnagyobb erőforrásod.", i:"https://picsum.photos/800/400?random=28"},
+ {a:"Simon Sinek", t:"Kezdd azzal, hogy miért.", i:"https://picsum.photos/800/400?random=29"},
+ {a:"Brene Brown", t:"A sebezhetőség a bátorság forrása.", i:"https://picsum.photos/800/400?random=30"},
+ {a:"Dale Carnegie", t:"Ügyelj arra, hogyan beszélsz magaddal—az határozza meg tetteidet.", i:"https://picsum.photos/800/400?random=31"},
+ {a:"John Wooden", t:"A siker az, amikor minden nap a legjobbat adod.", i:"https://picsum.photos/800/400?random=32"},
+ {a:"Zig Ziglar", t:"A gondolkodásod határozza meg jövődet.", i:"https://picsum.photos/800/400?random=33"},
+ {a:"Marcus Aurelius", t:"Az akadály maga az út.", i:"https://picsum.photos/800/400?random=34"},
+ {a:"Seneca", t:"Nem az az ember szerencsés, aki mindent megkap, hanem aki elégedett.", i:"https://picsum.photos/800/400?random=35"},
+ {a:"Rumi", t:"A változás dallamát csak akkor hallod, ha mozogsz.", i:"https://picsum.photos/800/400?random=36"},
+ {a:"Kurt Vonnegut", t:"Az élet nem arról szól, hogy várjuk a vihart, hanem hogy táncoljunk az esőben.", i:"https://picsum.photos/800/400?random=37"},
+ {a:"Florence Nightingale", t:"A kis dolgok ismétlődése hozza a nagy változást.", i:"https://picsum.photos/800/400?random=38"},
+ {a:"Robert Frost", t:"Az út, amelyet választasz, határozza meg életed.", i:"https://picsum.photos/800/400?random=39"},
+ {a:"Ayn Rand", t:"Az ember célja a boldogság – dolgozz érte.", i:"https://picsum.photos/800/400?random=40"},
+ {a:"Mary Anne Radmacher", t:"Légy bátor. Légy önmagad.", i:"https://picsum.photos/800/400?random=41"},
+ {a:"Barbara Corcoran", t:"A sikerhez kockáztatni kell.", i:"https://picsum.photos/800/400?random=42"},
+ {a:"Bill Gates", t:"Tanulj mindig, a tudás hozza a lehetőséget.", i:"https://picsum.photos/800/400?random=43"},
+ {a:"Jeff Bezos", t:"Kezdd kicsiben, gondolkodj nagyban.", i:"https://picsum.photos/800/400?random=44"},
+ {a:"Sheryl Sandberg", t:"Állj fel és próbálkozz újra.", i:"https://picsum.photos/800/400?random=45"},
+ {a:"Larry Page", t:"Ne félj nagyot álmodni.", i:"https://picsum.photos/800/400?random=46"},
+ {a:"Malala Yousafzai", t:"Egy könyv és egy toll megváltoztathatja a világot.", i:"https://picsum.photos/800/400?random=47"},
+ {a:"Simon Bolivar", t:"A bátorság hirdeti a szabadságot.", i:"https://picsum.photos/800/400?random=48"},
+ {a:"Unknown", t:"Minden nagy út egyetlen lépéssel kezdődik.", i:"https://picsum.photos/800/400?random=49"},
+ {a:"Unknown", t:"Tűzz ki célt, dolgozz érte, soha ne add fel.", i:"https://picsum.photos/800/400?random=50"}
 ];
 
 let statMode = "week";
 let statChartObj = null;
 const DOM = {};
+let undoStack = []; // tömb az utolsó törlések számára (FIFO-style, itt csak 1 elemre van időkorlát)
+let undoTimeouts = []; // tárolja a setTimeout ID-ket a cleanuphez
+let currentEdit = null; // {type:'journal'|'sport'|'book', idx: originalIndex}
 
+/* Init DOM és eventek */
 function initDOM(){
  DOM.quote = document.getElementById('quote');
  DOM.motImg = document.getElementById('motImg');
@@ -239,6 +394,29 @@ function initDOM(){
 
  DOM.statChart = document.getElementById('statChart');
 
+ // Modal elemek
+ DOM.modalBackdrop = document.getElementById('modalBackdrop');
+ DOM.modalJournal = document.getElementById('modalJournal');
+ DOM.modalCharCount = document.getElementById('modalCharCount');
+ DOM.modalFieldJournal = document.getElementById('modalFieldJournal');
+ DOM.modalFieldSport = document.getElementById('modalFieldSport');
+ DOM.modalSportType = document.getElementById('modalSportType');
+ DOM.modalFieldBook = document.getElementById('modalFieldBook');
+ DOM.modalBookTitle = document.getElementById('modalBookTitle');
+ DOM.modalSaveBtn = document.getElementById('modalSaveBtn');
+ DOM.modalCancelBtn = document.getElementById('modalCancelBtn');
+
+ // Undo
+ DOM.undoBar = document.getElementById('undoBar');
+ DOM.undoBtn = document.getElementById('undoBtn');
+ DOM.undoDismiss = document.getElementById('undoDismiss');
+ DOM.undoMsg = document.getElementById('undoMsg');
+
+ // IO
+ DOM.exportBtn = document.getElementById('exportBtn');
+ DOM.importBtn = document.getElementById('importBtn');
+ DOM.fileInput = document.getElementById('fileInput');
+
  // Tabs
  document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> tab(btn, btn.dataset.target));
@@ -262,7 +440,7 @@ function initDOM(){
   DOM.motImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="#222"/><text x="50%" y="50%" fill="#ff9800" font-size="24" font-family="Arial" text-anchor="middle" alignment-baseline="middle">Kép nem elérhető</text></svg>');
  });
 
- // Delegált click listener a szerkesztés/törlés gombokra
+ // Delegált click listener a szerkesztés/törlés gombokra (működik a dinamikusan frissített belső HTML-lel is)
  [DOM.statJournalList, DOM.statSportList, DOM.statBookList].forEach(listEl => {
   if(!listEl) return;
   listEl.addEventListener('click', (ev)=>{
@@ -271,12 +449,29 @@ function initDOM(){
    const action = btn.dataset.action;
    const type = btn.dataset.type;
    const idx = parseInt(btn.dataset.idx, 10);
-   if(action === 'edit') editEntry(type, idx);
-   if(action === 'delete') deleteEntry(type, idx);
+   if(action === 'edit') openEditModal(type, idx);
+   if(action === 'delete') performDelete(type, idx);
   });
  });
+
+ // Modal events
+ DOM.modalSaveBtn.addEventListener('click', modalSave);
+ DOM.modalCancelBtn.addEventListener('click', closeModal);
+ DOM.modalJournal.addEventListener('input', ()=> {
+  DOM.modalCharCount.innerText = DOM.modalJournal.value.length;
+ });
+
+ // Undo events
+ DOM.undoBtn.addEventListener('click', undoLast);
+ DOM.undoDismiss.addEventListener('click', hideUndoBar);
+
+ // IO events
+ DOM.exportBtn.addEventListener('click', exportData);
+ DOM.importBtn.addEventListener('click', ()=> DOM.fileInput.click());
+ DOM.fileInput.addEventListener('change', importFile);
 }
 
+/* Alap funkciók */
 function tab(btn,id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
  btn.classList.add("active");
@@ -303,6 +498,7 @@ function countJournalChars(){
  DOM.saveJournalBtn.disabled = len < 90;
 }
 
+/* Mentés funkciók */
 function saveJournal(){
  if(!DOM.journal) return;
  const text = DOM.journal.value.trim();
@@ -336,6 +532,7 @@ function saveBook(){
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
+/* Stat és lista render */
 function switchStat(m){
  statMode = m;
  DOM.weekBtn.classList.toggle("active", m==="week");
@@ -375,7 +572,7 @@ function loadStats(){
  // Render lists, használjuk az eredeti tömb indexét (_idx) data-idxként
  if(DOM.statJournalList) DOM.statJournalList.innerHTML = jf.map(x => `
   <div class="card">
-    ${escapeHtml(truncate(x.text, 100))}
+    ${escapeHtml(truncate(x.text, 200))}
     <div class="entry-meta">${formatDate(x.date)}</div>
     <div class="entry-actions">
       <button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button>
@@ -404,43 +601,211 @@ function loadStats(){
   </div>`).join("");
 }
 
-function editEntry(type, originalIdx){
- if(!['journal','sport','book'].includes(type)) return;
- const key = type;
- let arr = JSON.parse(localStorage.getItem(key) || "[]");
- if(originalIdx < 0 || originalIdx >= arr.length) return;
- const item = arr[originalIdx];
+/* Modal szerkesztés */
+function openEditModal(type, originalIdx){
+ currentEdit = {type, idx: originalIdx};
+ // mutassuk a megfelelő mezőt
+ DOM.modalFieldJournal.style.display = 'none';
+ DOM.modalFieldSport.style.display = 'none';
+ DOM.modalFieldBook.style.display = 'none';
+
+ const arr = JSON.parse(localStorage.getItem(type) || "[]");
+ const item = arr[originalIdx] || {};
  if(type === 'journal'){
-  const newText = prompt("Szerkeszd a naplót (minimum 90 karakter):", item.text);
-  if(newText === null) return;
-  if(newText.trim().length < 90){ alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return; }
-  arr[originalIdx].text = newText.trim();
+  DOM.modalFieldJournal.style.display = '';
+  DOM.modalJournal.value = item.text || '';
+  DOM.modalCharCount.innerText = DOM.modalJournal.value.length;
  } else if(type === 'sport'){
-  const newType = prompt("Szerkeszd az edzés típusát:", item.type);
-  if(newType === null) return;
-  if(!newType.trim()) return;
-  arr[originalIdx].type = newType.trim();
+  DOM.modalFieldSport.style.display = '';
+  DOM.modalSportType.value = item.type || '';
  } else if(type === 'book'){
-  const newTitle = prompt("Szerkeszd a könyv címét:", item.title);
-  if(newTitle === null) return;
-  if(!newTitle.trim()) return;
-  arr[originalIdx].title = newTitle.trim();
+  DOM.modalFieldBook.style.display = '';
+  DOM.modalBookTitle.value = item.title || '';
  }
- localStorage.setItem(key, JSON.stringify(arr));
+
+ DOM.modalBackdrop.style.display = 'flex';
+ // fókuszáljunk (kisebb késleltetés a render miatt)
+ setTimeout(()=> {
+  if(type === 'journal') DOM.modalJournal.focus();
+  if(type === 'sport') DOM.modalSportType.focus();
+  if(type === 'book') DOM.modalBookTitle.focus();
+ }, 50);
+}
+
+function closeModal(){
+ currentEdit = null;
+ DOM.modalBackdrop.style.display = 'none';
+}
+
+/* Mentés a modalból */
+function modalSave(){
+ if(!currentEdit) return;
+ const {type, idx} = currentEdit;
+ let arr = JSON.parse(localStorage.getItem(type) || "[]");
+ if(type === 'journal'){
+  const newText = DOM.modalJournal.value.trim();
+  if(newText.length < 90){ alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return; }
+  if(idx >= 0 && idx < arr.length){
+   arr[idx].text = newText;
+   arr[idx].date = Date.now();
+  } else {
+   arr.push({text:newText, date:Date.now()});
+  }
+ } else if(type === 'sport'){
+  const newType = DOM.modalSportType.value.trim();
+  if(!newType){ alert("Adj meg egy edzés típust."); return; }
+  if(idx >= 0 && idx < arr.length){
+   arr[idx].type = newType;
+   arr[idx].date = Date.now();
+  } else {
+   arr.push({type:newType, date:Date.now()});
+  }
+ } else if(type === 'book'){
+  const newTitle = DOM.modalBookTitle.value.trim();
+  if(!newTitle){ alert("Adj meg egy könyvcímet."); return; }
+  if(idx >= 0 && idx < arr.length){
+   arr[idx].title = newTitle;
+   arr[idx].date = Date.now();
+  } else {
+   arr.push({title:newTitle, date:Date.now()});
+  }
+ }
+ localStorage.setItem(type, JSON.stringify(arr));
+ closeModal();
  loadStats();
 }
 
-function deleteEntry(type, originalIdx){
- if(!['journal','sport','book'].includes(type)) return;
+/* Törlés + undo */
+function performDelete(type, originalIdx){
  const key = type;
  let arr = JSON.parse(localStorage.getItem(key) || "[]");
  if(originalIdx < 0 || originalIdx >= arr.length) return;
- if(!confirm("Biztosan törlöd ezt a bejegyzést?")) return;
- arr.splice(originalIdx, 1);
+ // remove item and push to undo stack
+ const [removed] = arr.splice(originalIdx, 1);
  localStorage.setItem(key, JSON.stringify(arr));
+ // push undo entry
+ const undoEntry = {type: key, data: removed, idx: originalIdx};
+ undoStack.push(undoEntry);
+ // show undo bar with message
+ DOM.undoMsg.innerText = `Törölve: ${summaryFor(undoEntry)}`;
+ showUndoBar();
  loadStats();
+ // időzített véglegesítés: 8 másodperc
+ const to = setTimeout(()=> {
+  // ha még a stackben van ez az entry, eltávolítjuk (véglegesít)
+  const pos = undoStack.indexOf(undoEntry);
+  if(pos >= 0) undoStack.splice(pos,1);
+  cleanupUndoBarIfEmpty();
+ }, 8000);
+ undoTimeouts.push(to);
 }
 
+function summaryFor(entry){
+ if(!entry) return '';
+ if(entry.type === 'journal') return truncate(entry.data.text || '', 40);
+ if(entry.type === 'sport') return entry.data.type || '';
+ if(entry.type === 'book') return entry.data.title || '';
+ return '';
+}
+
+function showUndoBar(){
+ DOM.undoBar.style.display = 'flex';
+}
+
+function hideUndoBar(){
+ DOM.undoBar.style.display = 'none';
+ // tisztítsuk a timeoutokat és stacket (nem visszaállítható után bezárás)
+ undoStack = [];
+ undoTimeouts.forEach(t => clearTimeout(t));
+ undoTimeouts = [];
+}
+
+function cleanupUndoBarIfEmpty(){
+ if(undoStack.length === 0){
+  DOM.undoBar.style.display = 'none';
+  undoTimeouts.forEach(t => clearTimeout(t));
+  undoTimeouts = [];
+ }
+}
+
+function undoLast(){
+ if(undoStack.length === 0) return;
+ // visszaállítjuk az utolsó elem(ek) - LIFO: visszaállítjuk az utolsót
+ const entry = undoStack.pop();
+ // clear its timeout if még létezik
+ if(undoTimeouts.length){
+  const t = undoTimeouts.pop();
+  clearTimeout(t);
+ }
+ let arr = JSON.parse(localStorage.getItem(entry.type) || "[]");
+ // ha az index túl nagy (közben más törlés/hozzáadás történt), beteszzük a végére
+ const insertIdx = Math.min(Math.max(0, entry.idx), arr.length);
+ arr.splice(insertIdx, 0, entry.data);
+ localStorage.setItem(entry.type, JSON.stringify(arr));
+ loadStats();
+ cleanupUndoBarIfEmpty();
+}
+
+/* Export / Import */
+function exportData(){
+ const payload = {
+  journal: JSON.parse(localStorage.getItem('journal') || "[]"),
+  sport: JSON.parse(localStorage.getItem('sport') || "[]"),
+  book: JSON.parse(localStorage.getItem('book') || "[]"),
+  exportedAt: Date.now()
+ };
+ const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ const name = `motivacio-app-export-${new Date().toISOString().slice(0,10)}.json`;
+ a.download = name;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ URL.revokeObjectURL(url);
+}
+
+function importFile(ev){
+ const f = ev.target.files && ev.target.files[0];
+ if(!f) return;
+ const reader = new FileReader();
+ reader.onload = function(e){
+  try{
+   const data = JSON.parse(e.target.result);
+   // validate shape
+   if(typeof data !== 'object') throw new Error('Hibás fájl.');
+   const j = Array.isArray(data.journal) ? data.journal : [];
+   const s = Array.isArray(data.sport) ? data.sport : [];
+   const b = Array.isArray(data.book) ? data.book : [];
+
+   // kérdezzük meg a felhasználót: felülírja vagy összevonja?
+   const wantReplace = confirm("Felülírja a helyi adatokat az importáltakkal? (OK = felülír, Mégse = összevonás)");
+   if(wantReplace){
+    localStorage.setItem('journal', JSON.stringify(j));
+    localStorage.setItem('sport', JSON.stringify(s));
+    localStorage.setItem('book', JSON.stringify(b));
+   } else {
+    // merge: adjuk hozzá az importált elemeket a végéhez (ne legyenek duplikátumok kezelve)
+    const curJ = JSON.parse(localStorage.getItem('journal') || "[]");
+    const curS = JSON.parse(localStorage.getItem('sport') || "[]");
+    const curB = JSON.parse(localStorage.getItem('book') || "[]");
+    localStorage.setItem('journal', JSON.stringify(curJ.concat(j)));
+    localStorage.setItem('sport', JSON.stringify(curS.concat(s)));
+    localStorage.setItem('book', JSON.stringify(curB.concat(b)));
+   }
+   alert("Import sikeres.");
+   loadStats();
+  }catch(err){
+   alert("Import hiba: " + err.message);
+  }
+ };
+ reader.readAsText(f);
+ // tisztítsuk a file inputot, hogy ugyanazt a fájlt újra be tudjuk tölteni ha kell
+ ev.target.value = '';
+}
+
+/* Segédfüggvények */
 function formatDate(ts){
  if(!ts) return "";
  try{
@@ -464,6 +829,7 @@ function escapeHtml(str){
   .replace(/'/g, '&#39;');
 }
 
+/* Inicializálás */
 document.addEventListener('DOMContentLoaded', ()=>{
  initDOM();
  newQuote();
