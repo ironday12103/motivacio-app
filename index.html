@@ -1,68 +1,71 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Motiváció App</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 /* Alap stílusok */
-body{margin:0;background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;}
-.app{width:100%;max-width:480px;height:96vh;background:#111;border-radius:28px;padding:18px;box-shadow:0 0 40px rgba(0,0,0,.9);overflow:auto;position:relative;}
-.tabs{display:flex;gap:6px;margin-bottom:10px;}
-.tabs button{flex:1;border:none;border-radius:14px;padding:10px;background:#333;color:#fff;font-size:13px;cursor:pointer;}
-.tabs button.active{background:#ff9800;color:#000;}
-.view{display:none;} .view.active{display:block;}
-.stat-tabs{display:flex;gap:6px;margin-bottom:10px;}
-.stat-tabs button{flex:1;border:none;border-radius:14px;padding:10px;background:#333;color:#fff;cursor:pointer;}
-.stat-tabs button.active{background:#ff9800;color:#000;}
+body{margin:0;background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh}
+.app{width:100%;max-width:480px;height:96vh;background:#111;border-radius:28px;padding:18px;box-shadow:0 0 40px rgba(0,0,0,.9);overflow:auto;position:relative}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;border:none;border-radius:14px;padding:10px;background:#333;color:#fff;font-size:13px;cursor:pointer}
+.tabs button.active{background:#ff9800;color:#000}
+.view{display:none}.view.active{display:block}
 
 /* Főoldali stílusok */
-.header-quote{text-align:center;font-size:14px;margin-bottom:8px;opacity:.9;}
-.motivation-card{background:linear-gradient(135deg,#ff9800,#ff5722,#9c27b0);border-radius:22px;padding:14px;text-align:center;}
-.author-photo{width:120px;height:120px;border-radius:50%;object-fit:cover;margin:8px auto 10px auto;border:3px solid rgba(255,255,255,0.12);background:#222;display:block;cursor:pointer;}
-#authorTag{display:inline-block;padding:6px 14px;border-radius:16px;font-weight:bold;background:#222;color:#ff9800;margin-bottom:6px;}
-#authorCredit{display:block;font-size:11px;opacity:0.85;margin-top:6px;color:#ddd;}
-#authorCredit a{color:#ffd89b;text-decoration:underline;}
-.big-quote{font-size:24px;font-weight:bold;line-height:1.2;}
+.header-quote{text-align:center;font-size:14px;margin-bottom:8px;opacity:.9}
+.motivation-card{background:linear-gradient(135deg,#ff9800,#ff5722,#9c27b0);border-radius:22px;padding:14px;text-align:center}
+.author-photo{width:120px;height:120px;border-radius:50%;object-fit:cover;margin:8px auto 10px auto;border:3px solid rgba(255,255,255,0.12);background:#222;display:block;cursor:pointer}
+#authorTag{display:inline-block;padding:6px 14px;border-radius:16px;font-weight:bold;background:#222;color:#ff9800;margin-bottom:6px}
+#authorCredit{display:block;font-size:11px;opacity:0.85;margin-top:6px;color:#ddd}
+#authorCredit a{color:#ffd89b;text-decoration:underline}
+.big-quote{font-size:24px;font-weight:bold;line-height:1.2}
 
-/* Diagram konténer — fix hely és méret */
-.mini-stat-card{background:#1d1d1d;border-radius:16px;padding:10px;margin-top:12px;height:200px;box-sizing:border-box;}
-.mini-stat-card canvas{width:100% !important;height:140px !important;display:block;}
+/* Diagram (a Menüben): fix méretezés, nem okoz layout-változást */
+.diagram-card{background:#1d1d1d;border-radius:16px;padding:10px;margin-top:12px;height:260px;box-sizing:border-box;overflow:hidden}
+.diagram-card canvas{width:100% !important;height:200px !important;display:block}
 
 /* Menu controls */
-.menu-controls{display:flex;gap:8px;margin-bottom:8px;}
+.menu-controls{display:flex;gap:8px;margin-bottom:8px}
 .menu-controls button{flex:1;padding:10px;border-radius:10px;border:none;background:#333;color:#fff;cursor:pointer}
 .menu-controls button.active{background:#ff9800;color:#000}
 
 /* Account view */
-.account-card{background:#1d1d1d;padding:12px;border-radius:12px;}
+.account-card{background:#1d1d1d;padding:12px;border-radius:12px}
 .account-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
 .account-row b{font-size:14px}
 
-/* shared controls */
-textarea,input,select{width:100%;padding:12px;border-radius:14px;border:none;margin-top:8px;box-sizing:border-box;}
-button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cursor:pointer;}
-.main{background:#ff9800;color:#000;} .secondary{background:#333;color:#fff;}
-.card{background:#1d1d1d;border-radius:16px;padding:12px;margin-bottom:8px;}
-.stat-box{background:#222;border-radius:16px;padding:12px;margin-bottom:8px;}
-.entry-meta{font-size:12px;opacity:.85;margin-top:6px;}
-.entry-actions{margin-top:8px;display:flex;gap:6px;}
-.small-btn{flex:1;padding:8px;border-radius:10px;font-size:13px;}
-.small-danger{background:#b00020;color:#fff;} .small-secondary{background:#333;color:#fff;}
+/* Shared */
+textarea,input,select{width:100%;padding:12px;border-radius:14px;border:none;margin-top:8px;box-sizing:border-box}
+button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cursor:pointer}
+.main{background:#ff9800;color:#000}
+.secondary{background:#333;color:#fff}
+.card{background:#1d1d1d;border-radius:16px;padding:12px;margin-bottom:8px}
+.stat-box{background:#222;border-radius:16px;padding:12px;margin-bottom:8px}
+.entry-meta{font-size:12px;opacity:.85;margin-top:6px}
+.entry-actions{margin-top:8px;display:flex;gap:6px}
+.small-btn{flex:1;padding:8px;border-radius:10px;font-size:13px}
+.small-danger{background:#b00020;color:#fff}
+.small-secondary{background:#333;color:#fff}
 
-/* Modal / Undo / IO styles (unchanged) */
-.modal-backdrop{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:2000;}
-.modal{background:#111;border-radius:12px;padding:16px;width:92%;max-width:420px;box-shadow:0 8px 24px rgba(0,0,0,0.6);}
-.modal header{font-weight:bold;margin-bottom:8px;} .modal .row{margin-top:8px;} .modal .actions{display:flex;gap:8px;margin-top:12px;} .modal .actions button{flex:1}
-#undoBar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#222;color:#fff;padding:10px 12px;border-radius:12px;display:flex;gap:8px;align-items:center;z-index:3000;box-shadow:0 8px 20px rgba(0,0,0,0.6);display:none;}
-.io-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;} .io-actions button{flex:1;padding:10px;border-radius:10px} .file-input{display:none}
+/* Modal / Undo / IO */
+.modal-backdrop{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:2000}
+.modal{background:#111;border-radius:12px;padding:16px;width:92%;max-width:420px;box-shadow:0 8px 24px rgba(0,0,0,0.6)}
+.modal header{font-weight:bold;margin-bottom:8px}
+.modal .row{margin-top:8px}
+.modal .actions{display:flex;gap:8px;margin-top:12px}
+.modal .actions button{flex:1}
+#undoBar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#222;color:#fff;padding:10px 12px;border-radius:12px;display:flex;gap:8px;align-items:center;z-index:3000;box-shadow:0 8px 20px rgba(0,0,0,0.6);display:none}
+.io-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.io-actions button{flex:1;padding:10px;border-radius:10px}
+.file-input{display:none}
 </style>
 </head>
-
 <body>
 <div class="app">
 
@@ -77,10 +80,10 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 
   <div class="header-quote" id="dailyQuote"></div>
 
-  <!-- FŐOLDAL -->
+  <!-- FŐOLDAL: csak egy kép (szerző portré) és idézet -->
   <div id="mot" class="view active">
     <div class="motivation-card">
-      <img id="authorPhoto" class="author-photo" alt="Szerző képe" title="Kattints a forrás megnyitásához ha elérhető">
+      <img id="authorPhoto" class="author-photo" alt="Szerző képe" title="Kattints a forrás megnyitásához, ha elérhető">
       <div id="authorTag"></div>
       <div id="authorCredit"></div>
       <div class="big-quote" id="quote"></div>
@@ -134,7 +137,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
     </div>
   </div>
 
-  <!-- MENÜ: Diagram + Fiók -->
+  <!-- MENÜ: Diagram és Fiók -->
   <div id="menu" class="view">
     <div class="menu-controls">
       <button id="diagramBtn" class="active">Diagram</button>
@@ -142,9 +145,9 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
     </div>
 
     <div id="diagramView">
-      <div class="mini-stat-card">
-        <canvas id="miniChart" height="140"></canvas>
-        <div style="margin-top:8px;font-size:13px;color:#ddd" id="miniStatText"></div>
+      <div class="diagram-card">
+        <canvas id="diagramChart" height="200"></canvas>
+        <div style="margin-top:8px;font-size:13px;color:#ddd" id="diagramStatText"></div>
       </div>
     </div>
 
@@ -158,6 +161,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
         </div>
       </div>
     </div>
+
   </div>
 
 </div>
@@ -196,9 +200,16 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 </div>
 
 <script>
-/* Teljesítés: a miniChart egyszer jön létre (createMiniChart), responsive:false és animation:false.
-   updateMiniChart csak frissíti az adatot, így a diagram nem okoz layout-mozgást. */
+/*
+  Változtatások összefoglaló:
+  - A főoldalról TÖRLŐDÖTT a diagram (nincs több miniChart ott).
+  - A diagram kizárólag a Menü -> Diagram nézetben található (canvas id="diagramChart").
+  - A diagramot csak egyszer hozzuk létre, amikor először megnyitod a Diagram nézetet.
+  - A diagram fixed konténerben van (CSS height), Chart.js responsive:false és animation:false — így NEM okoz görgetést vagy elmozdulást.
+  - A diagramra kattintás/fókusz nem okoz automatikus scroll-t.
+*/
 
+/* Alapadatok */
 const quotes = [
  {a:"David Goggins", t:"A fájdalom ideiglenes.", p:""},
  {a:"Elon Musk", t:"Ha fontos, megcsinálod.", p:""},
@@ -214,7 +225,7 @@ const quotes = [
 
 let statMode = "week";
 let statChartObj = null;
-let miniChartObj = null;
+let diagramChartObj = null; // a Menü diagramja
 const DOM = {};
 let undoStack = [];
 let undoTimeouts = [];
@@ -249,13 +260,14 @@ function initDOM(){
   DOM.statBookList = document.getElementById('statBookList');
 
   DOM.statChart = document.getElementById('statChart');
-  DOM.miniChart = document.getElementById('miniChart');
-  DOM.miniStatText = document.getElementById('miniStatText');
 
   DOM.diagramBtn = document.getElementById('diagramBtn');
   DOM.accountBtn = document.getElementById('accountBtn');
   DOM.diagramView = document.getElementById('diagramView');
   DOM.accountView = document.getElementById('accountView');
+
+  DOM.diagramChart = document.getElementById('diagramChart');
+  DOM.diagramStatText = document.getElementById('diagramStatText');
 
   DOM.accName = document.getElementById('accName');
   DOM.accEmail = document.getElementById('accEmail');
@@ -287,16 +299,30 @@ function initDOM(){
       document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const id = btn.dataset.target;
+      // ne fókuszáljunk semmire, ne okozzunk automatikus görgetést
+      const scrollTop = document.scrollingElement ? document.scrollingElement.scrollTop : window.pageYOffset;
       document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
       const tgt = document.getElementById(id);
       if(tgt) tgt.classList.add('active');
+      // visszaállítjuk a scroll pozíciót (biztosítva, hogy semmi se görgesse le)
+      setTimeout(()=> {
+        if(document.scrollingElement) document.scrollingElement.scrollTop = scrollTop;
+        else window.scrollTo(0, scrollTop);
+      }, 0);
       if(id === 'stat') setTimeout(loadStats,200);
+      if(id === 'menu'){
+        // ha Diagram nézet aktív (alapból diagram gomb aktív), hozzuk létre a diagramot egyszer és töltsük be
+        // (nem hívunk fókuszt vagy scroll-t)
+        if(document.getElementById('diagramView').style.display !== 'block'){
+          // nothing
+        }
+      }
     });
   });
 
   document.getElementById('newQuoteBtn').addEventListener('click', newQuote);
 
-  if(DOM.diagramBtn) DOM.diagramBtn.addEventListener('click', ()=> { DOM.diagramBtn.classList.add('active'); DOM.accountBtn.classList.remove('active'); DOM.diagramView.style.display='block'; DOM.accountView.style.display='none'; loadMiniStats(); });
+  if(DOM.diagramBtn) DOM.diagramBtn.addEventListener('click', ()=> { DOM.diagramBtn.classList.add('active'); DOM.accountBtn.classList.remove('active'); DOM.diagramView.style.display='block'; DOM.accountView.style.display='none'; ensureDiagramCreatedAndUpdated(); });
   if(DOM.accountBtn) DOM.accountBtn.addEventListener('click', ()=> { DOM.accountBtn.classList.add('active'); DOM.diagramBtn.classList.remove('active'); DOM.diagramView.style.display='none'; DOM.accountView.style.display='block'; loadAccountInfo(); });
 
   if (DOM.saveJournalBtn) DOM.saveJournalBtn.addEventListener('click', saveJournal);
@@ -315,11 +341,11 @@ function initDOM(){
 
   if(DOM.authorPhoto){
     DOM.authorPhoto.addEventListener('error', ()=>{
-      DOM.authorPhoto.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="#222"/><circle cx="60" cy="40" r="28" fill="#ff9800"/><rect x="20" y="80" width="80" height="12" fill="#444"/></svg>');
+      DOM.authorPhoto.src = 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="#222"/><circle cx="60" cy="40" r="28" fill="#ff9800"/><rect x="20" y="80" width="80" height="12" fill="#444"/></svg>');
     });
   }
 
-  [DOM.statJournalList, DOM.statSportList, DOM.statBookList].forEach(listEl=>{
+  [document.getElementById('statJournalList'), document.getElementById('statSportList'), document.getElementById('statBookList')].forEach(listEl=>{
     if(!listEl) return;
     listEl.addEventListener('click', ev=>{
       const btn = ev.target.closest('button[data-action]');
@@ -347,40 +373,52 @@ function initDOM(){
   if (DOM.clearAccountBtn) DOM.clearAccountBtn.addEventListener('click', clearAccount);
 }
 
-/* ---- Mini chart: create once, update only ---- */
-function createMiniChart(){
-  if(!DOM.miniChart) return;
-  const ctx = DOM.miniChart.getContext('2d');
-  miniChartObj = new Chart(ctx, {
-    type:'doughnut',
-    data:{labels:['Napló','Edzés','Könyv'],datasets:[{data:[0,0,0],backgroundColor:['#ff9800','#ff5722','#9c27b0']}]},
-    options:{
-      responsive:false,
-      maintainAspectRatio:false,
-      animation:false,
-      plugins:{legend:{position:'bottom',labels:{color:'#ddd'}}}
+/* Diagram a Menüben: csak egyszer hozzuk létre (responsive:false, animation:false),
+   és csak az adatokat frissítjük updateDiagramChart()-dal, így nem lesz automatikus görgetés. */
+function createDiagramChart(){
+  if(!DOM.diagramChart) return;
+  const ctx = DOM.diagramChart.getContext('2d');
+  diagramChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Napló','Edzés','Könyv'],
+      datasets: [{
+        label: 'Bejegyzések',
+        data: [0,0,0],
+        backgroundColor: ['#ff9800','#ff5722','#9c27b0']
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: '#ddd' } },
+        x: { ticks: { color: '#ddd' } }
+      }
     }
   });
 }
-function updateMiniChart(counts){
-  if(!miniChartObj){
-    createMiniChart();
-  }
-  if(!miniChartObj) return;
-  miniChartObj.data.datasets[0].data = counts;
-  miniChartObj.update('none'); // frissítés animáció nélkül
+
+function updateDiagramChart(counts){
+  if(!diagramChartObj) createDiagramChart();
+  if(!diagramChartObj) return;
+  diagramChartObj.data.datasets[0].data = counts;
+  diagramChartObj.update('none'); // frissítés animáció nélkül
 }
-function loadMiniStats(){
-  if(!DOM.miniChart) return;
+
+function ensureDiagramCreatedAndUpdated(){
+  // Hozzuk létre egyszer és töltsük fel adatokkal. Ne görgessünk sehová.
+  if(!diagramChartObj) createDiagramChart();
   const j = JSON.parse(localStorage.getItem('journal') || "[]");
   const s = JSON.parse(localStorage.getItem('sport') || "[]");
   const b = JSON.parse(localStorage.getItem('book') || "[]");
-  const counts = [j.length, s.length, b.length];
-  updateMiniChart(counts);
-  if(DOM.miniStatText) DOM.miniStatText.innerText = `Naplók: ${counts[0]} — Edzések: ${counts[1]} — Könyvek: ${counts[2]}`;
+  updateDiagramChart([j.length, s.length, b.length]);
+  if(DOM.diagramStatText) DOM.diagramStatText.innerText = `Naplók: ${j.length} — Edzések: ${s.length} — Könyvek: ${b.length}`;
 }
 
-/* ---- Egyéb funkciók (idézet, mentés, stat, modal, undo, export/import, account) ---- */
+/* Egyéb funkciók */
 function newQuote(){
   const q = quotes[Math.floor(Math.random()*quotes.length)];
   if(DOM.quote) DOM.quote.innerText = q.t;
@@ -389,23 +427,28 @@ function newQuote(){
   if(DOM.authorTag) DOM.authorTag.innerText = q.a;
   if(DOM.authorCredit){ if(q.credit) DOM.authorCredit.innerHTML = `<a href="${escapeHtml(q.creditUrl||'#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.credit)}</a>`; else DOM.authorCredit.innerHTML = ''; }
   if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
-  loadMiniStats();
+  // ne scrollozzunk; a diagram frissítése csak akkor történik, ha a Menü->Diagram nyitva van
+  const activeView = document.querySelector('.view.active');
+  if(activeView && activeView.id === 'menu' && DOM.diagramView && DOM.diagramView.style.display !== 'none') {
+    ensureDiagramCreatedAndUpdated();
+  }
 }
 
+/* Mentés, stat, modal, undo, import/export és account kezelések (összefoglalva) */
 function countJournalChars(){ if(!DOM.charCount||!DOM.journal||!DOM.saveJournalBtn) return; const len=DOM.journal.value.length; DOM.charCount.innerText=len; DOM.saveJournalBtn.disabled = len<90; }
-function saveJournal(){ if(!DOM.journal) return; const text=DOM.journal.value.trim(); if(text.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return;} let j=JSON.parse(localStorage.getItem('journal')||"[]"); j.push({text:text,date:Date.now()}); localStorage.setItem('journal',JSON.stringify(j)); DOM.journal.value=""; countJournalChars(); if(document.getElementById('stat').classList.contains('active')) loadStats(); loadMiniStats(); }
-function saveSport(){ if(!DOM.stype) return; const type=DOM.stype.value?DOM.stype.value.trim():""; if(!type){alert("Adj meg egy edzés típust.");return;} let s=JSON.parse(localStorage.getItem('sport')||"[]"); s.push({type:type,date:Date.now()}); localStorage.setItem('sport',JSON.stringify(s)); if(document.getElementById('stat').classList.contains('active')) loadStats(); loadMiniStats(); }
-function saveBook(){ if(!DOM.btitle) return; const title=DOM.btitle.value?DOM.btitle.value.trim():""; if(!title){alert("Adj meg egy könyvcímet.");return;} let b=JSON.parse(localStorage.getItem('book')||"[]"); b.push({title:title,date:Date.now()}); localStorage.setItem('book',JSON.stringify(b)); DOM.btitle.value=""; if(document.getElementById('stat').classList.contains('active')) loadStats(); loadMiniStats(); }
+function saveJournal(){ if(!DOM.journal) return; const text=DOM.journal.value.trim(); if(text.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie.");return} let j=JSON.parse(localStorage.getItem('journal')||"[]"); j.push({text:text,date:Date.now()}); localStorage.setItem('journal',JSON.stringify(j)); DOM.journal.value=""; countJournalChars(); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensureDiagramCreatedAndUpdated(); }
+function saveSport(){ if(!DOM.stype) return; const type=DOM.stype.value?DOM.stype.value.trim():""; if(!type){alert("Adj meg egy edzés típust.");return} let s=JSON.parse(localStorage.getItem('sport')||"[]"); s.push({type:type,date:Date.now()}); localStorage.setItem('sport',JSON.stringify(s)); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensureDiagramCreatedAndUpdated(); }
+function saveBook(){ if(!DOM.btitle) return; const title=DOM.btitle.value?DOM.btitle.value.trim():""; if(!title){alert("Adj meg egy könyvcímet.");return} let b=JSON.parse(localStorage.getItem('book')||"[]"); b.push({title:title,date:Date.now()}); localStorage.setItem('book',JSON.stringify(b)); DOM.btitle.value=""; if(document.getElementById('stat').classList.contains('active')) loadStats(); ensureDiagramCreatedAndUpdated(); }
 
-function switchStat(m){ statMode=m; if(DOM.weekBtn) DOM.weekBtn.classList.toggle("active",m==="week"); if(DOM.yearBtn) DOM.yearBtn.classList.toggle("active",m==="year"); loadStats(); }
+function switchStat(m){ statMode=m; if(DOM.weekBtn) DOM.weekBtn.classList.toggle("active", m==="week"); if(DOM.yearBtn) DOM.yearBtn.classList.toggle("active", m==="year"); loadStats(); }
 function loadStats(){
   const now=Date.now(), week=7*864e5;
   const j=JSON.parse(localStorage.getItem('journal')||"[]");
   const s=JSON.parse(localStorage.getItem('sport')||"[]");
   const b=JSON.parse(localStorage.getItem('book')||"[]");
-  const jWithIdx = j.map((x,i)=>({...x,_idx:i}));
-  const sWithIdx = s.map((x,i)=>({...x,_idx:i}));
-  const bWithIdx = b.map((x,i)=>({...x,_idx:i}));
+  const jWithIdx=j.map((x,i)=>({...x,_idx:i}));
+  const sWithIdx=s.map((x,i)=>({...x,_idx:i}));
+  const bWithIdx=b.map((x,i)=>({...x,_idx:i}));
   const jf = statMode==="week" ? jWithIdx.filter(x=>now-x.date<week) : jWithIdx;
   const sf = statMode==="week" ? sWithIdx.filter(x=>now-x.date<week) : sWithIdx;
   const bf = statMode==="week" ? bWithIdx.filter(x=>now-x.date<week) : bWithIdx;
@@ -416,39 +459,41 @@ function loadStats(){
   if(DOM.statChart){
     statChartObj = new Chart(DOM.statChart, { type:"bar", data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length],backgroundColor:['#ff9800','#ff5722','#9c27b0']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
   }
-  if(DOM.statJournalList) DOM.statJournalList.innerHTML = jf.map(x=>`<div class="card">${escapeHtml(truncate(x.text,200))}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
-  if(DOM.statSportList) DOM.statSportList.innerHTML = sf.map(x=>`<div class="card">${escapeHtml(x.type)}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
-  if(DOM.statBookList) DOM.statBookList.innerHTML = bf.map(x=>`<div class="card">${escapeHtml(x.title)}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
+  if(document.getElementById('statJournalList')) document.getElementById('statJournalList').innerHTML = jf.map(x=>`<div class="card">${escapeHtml(truncate(x.text,200))}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
+  if(document.getElementById('statSportList')) document.getElementById('statSportList').innerHTML = sf.map(x=>`<div class="card">${escapeHtml(x.type)}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
+  if(document.getElementById('statBookList')) document.getElementById('statBookList').innerHTML = bf.map(x=>`<div class="card">${escapeHtml(x.title)}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
 }
 
 /* Account */
-function loadAccountInfo(){ const acc=JSON.parse(localStorage.getItem('account')||"{}"); if(DOM.accName) DOM.accName.innerText = acc.name || '—'; if(DOM.accEmail) DOM.accEmail.innerText = acc.email || '—'; }
+function loadAccountInfo(){ const acc=JSON.parse(localStorage.getItem('account')||"{}"); if(DOM.accName) DOM.accName.innerText=acc.name||'—'; if(DOM.accEmail) DOM.accEmail.innerText=acc.email||'—'; }
 function openAccountEditor(){ const acc=JSON.parse(localStorage.getItem('account')||"{}"); const name=prompt("Név:", acc.name||""); if(name===null) return; const email=prompt("E-mail:", acc.email||""); if(email===null) return; localStorage.setItem('account',JSON.stringify({name:name.trim(),email:email.trim()})); loadAccountInfo(); }
 function clearAccount(){ if(!confirm("Biztosan törlöd a fiókadatokat?")) return; localStorage.removeItem('account'); loadAccountInfo(); }
 
-/* Modal / edit / delete / undo / import/export (összefoglalva) */
+/* Modal / edit / delete / undo / import/export */
 function openEditModal(type, originalIdx){ currentEdit={type,idx:originalIdx}; DOM.modalFieldJournal.style.display='none'; DOM.modalFieldSport.style.display='none'; DOM.modalFieldBook.style.display='none'; const arr=JSON.parse(localStorage.getItem(type)||"[]"); const item=arr[originalIdx]||{}; if(type==='journal'){DOM.modalFieldJournal.style.display='';DOM.modalJournal.value=item.text||'';DOM.modalCharCount.innerText=DOM.modalJournal.value.length;} if(type==='sport'){DOM.modalFieldSport.style.display='';DOM.modalSportType.value=item.type||'';} if(type==='book'){DOM.modalFieldBook.style.display='';DOM.modalBookTitle.value=item.title||'';} DOM.modalBackdrop.style.display='flex'; setTimeout(()=>{ if(type==='journal')DOM.modalJournal.focus(); if(type==='sport')DOM.modalSportType.focus(); if(type==='book')DOM.modalBookTitle.focus(); },50); }
 function closeModal(){ currentEdit=null; DOM.modalBackdrop.style.display='none'; }
-function modalSave(){ if(!currentEdit) return; const {type,idx}=currentEdit; let arr=JSON.parse(localStorage.getItem(type)||"[]"); if(type==='journal'){ const newText=DOM.modalJournal.value.trim(); if(newText.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return;} if(idx>=0&&idx<arr.length){arr[idx].text=newText;arr[idx].date=Date.now();} else arr.push({text:newText,date:Date.now()}); } else if(type==='sport'){ const newType=DOM.modalSportType.value.trim(); if(!newType){alert("Adj meg egy edzés típust.");return;} if(idx>=0&&idx<arr.length){arr[idx].type=newType;arr[idx].date=Date.now();} else arr.push({type:newType,date:Date.now()}); } else if(type==='book'){ const newTitle=DOM.modalBookTitle.value.trim(); if(!newTitle){alert("Adj meg egy könyvcímet.");return;} if(idx>=0&&idx<arr.length){arr[idx].title=newTitle;arr[idx].date=Date.now();} else arr.push({title:newTitle,date:Date.now()}); } localStorage.setItem(type,JSON.stringify(arr)); closeModal(); loadStats(); loadMiniStats(); }
-function performDelete(type, originalIdx){ let arr=JSON.parse(localStorage.getItem(type)||"[]"); if(originalIdx<0||originalIdx>=arr.length) return; const [removed]=arr.splice(originalIdx,1); localStorage.setItem(type,JSON.stringify(arr)); const undoEntry={type,data:removed,idx:originalIdx}; undoStack.push(undoEntry); if(DOM.undoMsg) DOM.undoMsg.innerText=`Törölve: ${truncate(removed.text||removed.type||removed.title||'',40)}`; if(DOM.undoBar) DOM.undoBar.style.display='flex'; loadStats(); loadMiniStats(); const to=setTimeout(()=>{ const pos=undoStack.indexOf(undoEntry); if(pos>=0) undoStack.splice(pos,1); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; },8000); undoTimeouts.push(to); }
-function undoLast(){ if(undoStack.length===0) return; const entry=undoStack.pop(); const t=undoTimeouts.pop(); if(t) clearTimeout(t); let arr=JSON.parse(localStorage.getItem(entry.type)||"[]"); const insertIdx=Math.min(Math.max(0,entry.idx),arr.length); arr.splice(insertIdx,0,entry.data); localStorage.setItem(entry.type,JSON.stringify(arr)); loadStats(); loadMiniStats(); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; }
+function modalSave(){ if(!currentEdit) return; const {type,idx}=currentEdit; let arr=JSON.parse(localStorage.getItem(type)||"[]"); if(type==='journal'){ const newText=DOM.modalJournal.value.trim(); if(newText.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie.");return} if(idx>=0&&idx<arr.length){arr[idx].text=newText;arr[idx].date=Date.now();}else arr.push({text:newText,date:Date.now()}); } else if(type==='sport'){ const newType=DOM.modalSportType.value.trim(); if(!newType){alert("Adj meg egy edzés típust.");return} if(idx>=0&&idx<arr.length){arr[idx].type=newType;arr[idx].date=Date.now();}else arr.push({type:newType,date:Date.now()}); } else if(type==='book'){ const newTitle=DOM.modalBookTitle.value.trim(); if(!newTitle){alert("Adj meg egy könyvcímet.");return} if(idx>=0&&idx<arr.length){arr[idx].title=newTitle;arr[idx].date=Date.now();}else arr.push({title:newTitle,date:Date.now()}); } localStorage.setItem(type,JSON.stringify(arr)); closeModal(); loadStats(); ensureDiagramCreatedAndUpdated(); }
+function performDelete(type, originalIdx){ let arr=JSON.parse(localStorage.getItem(type)||"[]"); if(originalIdx<0||originalIdx>=arr.length) return; const [removed]=arr.splice(originalIdx,1); localStorage.setItem(type,JSON.stringify(arr)); const undoEntry={type,data:removed,idx:originalIdx}; undoStack.push(undoEntry); if(DOM.undoMsg) DOM.undoMsg.innerText=`Törölve: ${truncate(removed.text||removed.type||removed.title||'',40)}`; if(DOM.undoBar) DOM.undoBar.style.display='flex'; loadStats(); ensureDiagramCreatedAndUpdated(); const to=setTimeout(()=>{ const pos=undoStack.indexOf(undoEntry); if(pos>=0) undoStack.splice(pos,1); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; },8000); undoTimeouts.push(to); }
+function undoLast(){ if(undoStack.length===0) return; const entry=undoStack.pop(); const t=undoTimeouts.pop(); if(t) clearTimeout(t); let arr=JSON.parse(localStorage.getItem(entry.type)||"[]"); const insertIdx=Math.min(Math.max(0,entry.idx),arr.length); arr.splice(insertIdx,0,entry.data); localStorage.setItem(entry.type,JSON.stringify(arr)); loadStats(); ensureDiagramCreatedAndUpdated(); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; }
 function hideUndoBar(){ undoStack=[]; undoTimeouts.forEach(t=>clearTimeout(t)); undoTimeouts=[]; if(DOM.undoBar) DOM.undoBar.style.display='none'; }
-
-/* Export / Import */
 function exportData(){ const payload={journal:JSON.parse(localStorage.getItem('journal')||"[]"),sport:JSON.parse(localStorage.getItem('sport')||"[]"),book:JSON.parse(localStorage.getItem('book')||"[]"),exportedAt:Date.now()}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`motivacio-export-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
-function importFile(ev){ const f=ev.target.files&&ev.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=function(e){ try{ const data=JSON.parse(e.target.result); if(typeof data!=='object') throw new Error('Hibás fájl.'); const j=Array.isArray(data.journal)?data.journal:[]; const s=Array.isArray(data.sport)?data.sport:[]; const b=Array.isArray(data.book)?data.book:[]; const wantReplace=confirm("Felülírja a helyi adatokat az importáltakkal? (OK = felülír, Mégse = összevonás)"); if(wantReplace){ localStorage.setItem('journal',JSON.stringify(j)); localStorage.setItem('sport',JSON.stringify(s)); localStorage.setItem('book',JSON.stringify(b)); } else { const curJ=JSON.parse(localStorage.getItem('journal')||"[]"); const curS=JSON.parse(localStorage.getItem('sport')||"[]"); const curB=JSON.parse(localStorage.getItem('book')||"[]"); localStorage.setItem('journal',JSON.stringify(curJ.concat(j))); localStorage.setItem('sport',JSON.stringify(curS.concat(s))); localStorage.setItem('book',JSON.stringify(curB.concat(b))); } alert("Import sikeres."); loadStats(); loadMiniStats(); } catch(err){ alert("Import hiba: "+err.message); } }; reader.readAsText(f); ev.target.value=''; }
+function importFile(ev){ const f=ev.target.files&&ev.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=function(e){ try{ const data=JSON.parse(e.target.result); if(typeof data!=='object') throw new Error('Hibás fájl.'); const j=Array.isArray(data.journal)?data.journal:[]; const s=Array.isArray(data.sport)?data.sport:[]; const b=Array.isArray(data.book)?data.book:[]; const wantReplace=confirm("Felülírja a helyi adatokat az importáltakkal? (OK = felülír, Mégse = összevonás)"); if(wantReplace){ localStorage.setItem('journal',JSON.stringify(j)); localStorage.setItem('sport',JSON.stringify(s)); localStorage.setItem('book',JSON.stringify(b)); } else { const curJ=JSON.parse(localStorage.getItem('journal')||"[]"); const curS=JSON.parse(localStorage.getItem('sport')||"[]"); const curB=JSON.parse(localStorage.getItem('book')||"[]"); localStorage.setItem('journal',JSON.stringify(curJ.concat(j))); localStorage.setItem('sport',JSON.stringify(curS.concat(s))); localStorage.setItem('book',JSON.stringify(curB.concat(b))); } alert("Import sikeres."); loadStats(); ensureDiagramCreatedAndUpdated(); } catch(err){ alert("Import hiba: "+err.message); } }; reader.readAsText(f); ev.target.value=''; }
 
-/* Helpers */
+/* Helper-ek */
 function formatDate(ts){ if(!ts) return ""; try{ const d=new Date(ts); return d.toLocaleString('hu-HU',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){return "";} }
 function truncate(str,max){ if(!str) return ""; return str.length>max?str.slice(0,max-1)+'…':str; }
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 document.addEventListener('DOMContentLoaded', ()=>{
   initDOM();
-  createMiniChart(); // egyszer hozzuk létre — így nem okoz layout mozgást
+  // diagramot csak akkor hozunk létre, amikor a Menü->Diagram-ra kattintasz (és itt előkészítjük, ha a menü nyitva van)
+  // de létrehozhatjuk egyszer rögtön is, hogy az első megjelenítés zökkenőmentes legyen:
+  // createDiagramChart(); // opcionális — most csak az első Diagram gombnyomáskor készül el a chart
   newQuote();
   countJournalChars();
-  loadMiniStats();
+  // ha a felhasználó közvetlenül a menüt hagyta aktívnak, frissítsük
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'menu') ensureDiagramCreatedAndUpdated();
   if(document.getElementById('stat').classList.contains('active')) loadStats();
 });
 </script>
