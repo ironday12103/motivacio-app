@@ -93,6 +93,19 @@ body{
  object-fit:cover;
  border-radius:16px;
 }
+
+/* Szerzői fotó (kis, kör alakú kép a motivációs szöveg előtt) */
+.author-photo{
+ width:72px;
+ height:72px;
+ border-radius:50%;
+ object-fit:cover;
+ margin:10px auto 6px auto;
+ border:3px solid rgba(255,255,255,0.12);
+ background:#222;
+ display:block;
+}
+
 #authorTag{
  display:inline-block;
  padding:6px 14px;
@@ -198,6 +211,8 @@ button{
 <div id="mot" class="view active">
  <div class="motivation-card">
   <img id="motImg" alt="Motivációs kép">
+  <!-- Szerzői fotó a motivációs szöveg fölött -->
+  <img id="authorPhoto" class="author-photo" alt="Szerző képe">
   <div id="authorTag"></div>
   <div class="big-quote" id="quote"></div>
  </div>
@@ -296,12 +311,11 @@ button{
 
 <script>
 /*
-  Új verzió:
-  - 50 motivációs idézet bővítve
-  - Modal szerkesztés (prompt helyett)
-  - Export / Import JSON
-  - Undo (törlés visszavonás) ideiglenes sávval
-  - Megtartva: explicit DOM lekérések, _idx megoldás stat szűrésnél, XSS escape, date formatting
+  Verzió: szerzői kép hozzáadva a motivációs laphoz.
+  - authorPhoto elem beállítása newQuote()-ban
+  - fallback kép hiba esetén
+  - az avatar forrása alapból: https://i.pravatar.cc/100?u=<author name>
+  - megtartva az összes korábbi funkció (modal, export/import, undo, stat)
 */
 
 const quotes = [
@@ -360,7 +374,7 @@ const quotes = [
 let statMode = "week";
 let statChartObj = null;
 const DOM = {};
-let undoStack = []; // tömb az utolsó törlések számára (FIFO-style, itt csak 1 elemre van időkorlát)
+let undoStack = []; // tömb az utolsó törlések számára
 let undoTimeouts = []; // tárolja a setTimeout ID-ket a cleanuphez
 let currentEdit = null; // {type:'journal'|'sport'|'book', idx: originalIndex}
 
@@ -368,6 +382,7 @@ let currentEdit = null; // {type:'journal'|'sport'|'book', idx: originalIndex}
 function initDOM(){
  DOM.quote = document.getElementById('quote');
  DOM.motImg = document.getElementById('motImg');
+ DOM.authorPhoto = document.getElementById('authorPhoto'); // új elem
  DOM.authorTag = document.getElementById('authorTag');
  DOM.dailyQuote = document.getElementById('dailyQuote');
 
@@ -435,12 +450,19 @@ function initDOM(){
  // Inputs
  DOM.journal.addEventListener('input', countJournalChars);
 
- // Image error fallback
+ // Image error fallback for large banner
  DOM.motImg.addEventListener('error', ()=>{
   DOM.motImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="#222"/><text x="50%" y="50%" fill="#ff9800" font-size="24" font-family="Arial" text-anchor="middle" alignment-baseline="middle">Kép nem elérhető</text></svg>');
  });
 
- // Delegált click listener a szerkesztés/törlés gombokra (működik a dinamikusan frissített belső HTML-lel is)
+ // Image error fallback for author photo
+ if(DOM.authorPhoto){
+  DOM.authorPhoto.addEventListener('error', ()=>{
+   DOM.authorPhoto.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="#222"/><circle cx="50" cy="35" r="20" fill="#ff9800"/><rect x="15" y="65" width="70" height="14" fill="#444"/></svg>');
+  });
+ }
+
+ // Delegált click listener a szerkesztés/törlés gombokra
  [DOM.statJournalList, DOM.statSportList, DOM.statBookList].forEach(listEl => {
   if(!listEl) return;
   listEl.addEventListener('click', (ev)=>{
@@ -486,6 +508,12 @@ function newQuote(){
  if(DOM.motImg){
   DOM.motImg.src = q.i;
   DOM.motImg.alt = q.t;
+ }
+ // author photo: ha nincs explicit p mező, generálunk egy avatar URL-t a név alapján
+ if(DOM.authorPhoto){
+  const avatarUrl = q.p ? q.p : ('https://i.pravatar.cc/100?u=' + encodeURIComponent(q.a));
+  DOM.authorPhoto.src = avatarUrl;
+  DOM.authorPhoto.alt = q.a;
  }
  if(DOM.authorTag) DOM.authorTag.innerText = q.a;
  if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
@@ -624,7 +652,6 @@ function openEditModal(type, originalIdx){
  }
 
  DOM.modalBackdrop.style.display = 'flex';
- // fókuszáljunk (kisebb késleltetés a render miatt)
  setTimeout(()=> {
   if(type === 'journal') DOM.modalJournal.focus();
   if(type === 'sport') DOM.modalSportType.focus();
@@ -680,19 +707,14 @@ function performDelete(type, originalIdx){
  const key = type;
  let arr = JSON.parse(localStorage.getItem(key) || "[]");
  if(originalIdx < 0 || originalIdx >= arr.length) return;
- // remove item and push to undo stack
  const [removed] = arr.splice(originalIdx, 1);
  localStorage.setItem(key, JSON.stringify(arr));
- // push undo entry
  const undoEntry = {type: key, data: removed, idx: originalIdx};
  undoStack.push(undoEntry);
- // show undo bar with message
  DOM.undoMsg.innerText = `Törölve: ${summaryFor(undoEntry)}`;
  showUndoBar();
  loadStats();
- // időzített véglegesítés: 8 másodperc
  const to = setTimeout(()=> {
-  // ha még a stackben van ez az entry, eltávolítjuk (véglegesít)
   const pos = undoStack.indexOf(undoEntry);
   if(pos >= 0) undoStack.splice(pos,1);
   cleanupUndoBarIfEmpty();
@@ -714,7 +736,6 @@ function showUndoBar(){
 
 function hideUndoBar(){
  DOM.undoBar.style.display = 'none';
- // tisztítsuk a timeoutokat és stacket (nem visszaállítható után bezárás)
  undoStack = [];
  undoTimeouts.forEach(t => clearTimeout(t));
  undoTimeouts = [];
@@ -730,15 +751,12 @@ function cleanupUndoBarIfEmpty(){
 
 function undoLast(){
  if(undoStack.length === 0) return;
- // visszaállítjuk az utolsó elem(ek) - LIFO: visszaállítjuk az utolsót
  const entry = undoStack.pop();
- // clear its timeout if még létezik
  if(undoTimeouts.length){
   const t = undoTimeouts.pop();
   clearTimeout(t);
  }
  let arr = JSON.parse(localStorage.getItem(entry.type) || "[]");
- // ha az index túl nagy (közben más törlés/hozzáadás történt), beteszzük a végére
  const insertIdx = Math.min(Math.max(0, entry.idx), arr.length);
  arr.splice(insertIdx, 0, entry.data);
  localStorage.setItem(entry.type, JSON.stringify(arr));
@@ -773,20 +791,16 @@ function importFile(ev){
  reader.onload = function(e){
   try{
    const data = JSON.parse(e.target.result);
-   // validate shape
    if(typeof data !== 'object') throw new Error('Hibás fájl.');
    const j = Array.isArray(data.journal) ? data.journal : [];
    const s = Array.isArray(data.sport) ? data.sport : [];
    const b = Array.isArray(data.book) ? data.book : [];
-
-   // kérdezzük meg a felhasználót: felülírja vagy összevonja?
    const wantReplace = confirm("Felülírja a helyi adatokat az importáltakkal? (OK = felülír, Mégse = összevonás)");
    if(wantReplace){
     localStorage.setItem('journal', JSON.stringify(j));
     localStorage.setItem('sport', JSON.stringify(s));
     localStorage.setItem('book', JSON.stringify(b));
    } else {
-    // merge: adjuk hozzá az importált elemeket a végéhez (ne legyenek duplikátumok kezelve)
     const curJ = JSON.parse(localStorage.getItem('journal') || "[]");
     const curS = JSON.parse(localStorage.getItem('sport') || "[]");
     const curB = JSON.parse(localStorage.getItem('book') || "[]");
@@ -801,7 +815,6 @@ function importFile(ev){
   }
  };
  reader.readAsText(f);
- // tisztítsuk a file inputot, hogy ugyanazt a fájlt újra be tudjuk tölteni ha kell
  ev.target.value = '';
 }
 
