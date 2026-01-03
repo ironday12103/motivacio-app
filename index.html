@@ -96,8 +96,8 @@ body{
 
 /* Szerzői fotó (kis, kör alakú kép a motivációs szöveg előtt) */
 .author-photo{
- width:72px;
- height:72px;
+ width:96px;
+ height:96px;
  border-radius:50%;
  object-fit:cover;
  margin:10px auto 6px auto;
@@ -115,7 +115,16 @@ body{
  color:#ff9800;
  margin-bottom:6px;
 }
-.big-quote{font-size:26px;font-weight:bold;}
+#authorCredit{
+ display:block;
+ font-size:11px;
+ opacity:0.85;
+ margin-top:6px;
+ color:#ddd;
+}
+#authorCredit a{ color:#ffd89b; text-decoration:underline; }
+
+.big-quote{font-size:24px;font-weight:bold;}
 
 textarea,input,select{
  width:100%;
@@ -214,6 +223,7 @@ button{
   <!-- Szerzői fotó a motivációs szöveg fölött -->
   <img id="authorPhoto" class="author-photo" alt="Szerző képe">
   <div id="authorTag"></div>
+  <div id="authorCredit"></div>
   <div class="big-quote" id="quote"></div>
  </div>
  <button id="newQuoteBtn" class="main">Új motiváció</button>
@@ -311,27 +321,26 @@ button{
 
 <script>
 /*
-  Verzió: szerzői kép hozzáadva a motivációs laphoz.
-  - authorPhoto elem beállítása newQuote()-ban
-  - fallback kép hiba esetén
-  - az avatar forrása alapból: https://i.pravatar.cc/100?u=<author name>
-  - megtartva az összes korábbi funkció (modal, export/import, undo, stat)
+  Automatikus avatar (pravatar) minden idézőnél:
+  - ha a quote-ban nincs kifejezetten kép URL, akkor a pravatarot használjuk a szerző neve alapján
+  - nincs szükség egyedi p mezőkre
+  - megőriz minden korábbi funkciót (modal, undo, export/import, stat)
 */
 
 const quotes = [
  {a:"David Goggins", t:"A fájdalom ideiglenes.", i:"https://picsum.photos/800/400?random=1"},
  {a:"Elon Musk", t:"Ha fontos, megcsinálod.", i:"https://picsum.photos/800/400?random=2"},
- {a:"Nelson Mandela", t:"Mindig úgy tűnik lehetetlennek, amíg meg nem csinálod.", i:"https://picsum.photos/800/400?random=3"},
- {a:"Winston Churchill", t:"Soha ne add fel.", i:"https://picsum.photos/800/400?random=4"},
- {a:"Confucius", t:"A legtávolabbi utazás is egy lépéssel kezdődik.", i:"https://picsum.photos/800/400?random=5"},
- {a:"Eleanor Roosevelt", t:"Ne félj megpróbálni.", i:"https://picsum.photos/800/400?random=6"},
- {a:"Steve Jobs", t:"Az életedet az határozza meg, amit teszel, nem az, amit mondasz.", i:"https://picsum.photos/800/400?random=7"},
- {a:"Albert Einstein", t:"Próbálj meg mindig jobb lenni.", i:"https://picsum.photos/800/400?random=8"},
- {a:"Mark Twain", t:"Az odaérés titka az, hogy elindulsz.", i:"https://picsum.photos/800/400?random=9"},
- {a:"Henry Ford", t:"Ha azt hiszed, hogy képes vagy rá, már félig kész vagy.", i:"https://picsum.photos/800/400?random=10"},
- {a:"Mahatma Gandhi", t:"Legyél te a változás, amit látni szeretnél a világban.", i:"https://picsum.photos/800/400?random=11"},
- {a:"Bruce Lee", t:"Ne legyenek korlátaid, csak céljaid.", i:"https://picsum.photos/800/400?random=12"},
- {a:"Confucius", t:"A tanulás soha nem fárasztó, csak a tudatlanság fárasztó.", i:"https://picsum.photos/800/400?random=13"},
+ {a:"Steve Jobs", t:"Az életedet az határozza meg, amit teszel, nem az, amit mondasz.", i:"https://picsum.photos/800/400?random=3"},
+ {a:"Nelson Mandela", t:"Mindig úgy tűnik lehetetlennek, amíg meg nem csinálod.", i:"https://picsum.photos/800/400?random=4"},
+ {a:"Winston Churchill", t:"Soha ne add fel.", i:"https://picsum.photos/800/400?random=5"},
+ {a:"Confucius", t:"A legtávolabbi utazás is egy lépéssel kezdődik.", i:"https://picsum.photos/800/400?random=6"},
+ {a:"Eleanor Roosevelt", t:"Ne félj megpróbálni.", i:"https://picsum.photos/800/400?random=7"},
+ {a:"Steve Jobs (idézet 2)", t:"Maradj éhes, maradj bolond.", i:"https://picsum.photos/800/400?random=8"},
+ {a:"Albert Einstein", t:"Próbálj meg mindig jobb lenni.", i:"https://picsum.photos/800/400?random=9"},
+ {a:"Mark Twain", t:"Az odaérés titka az, hogy elindulsz.", i:"https://picsum.photos/800/400?random=10"},
+ {a:"Henry Ford", t:"Ha azt hiszed, hogy képes vagy rá, már félig kész vagy.", i:"https://picsum.photos/800/400?random=11"},
+ {a:"Mahatma Gandhi", t:"Legyél te a változás, amit látni szeretnél a világban.", i:"https://picsum.photos/800/400?random=12"},
+ {a:"Bruce Lee", t:"Ne legyenek korlátaid, csak céljaid.", i:"https://picsum.photos/800/400?random=13"},
  {a:"Theodore Roosevelt", t:"Sok ember kudarcot vall, mert eltökélték, hogy keveset fognak tenni.", i:"https://picsum.photos/800/400?random=14"},
  {a:"Vince Lombardi", t:"A győzelem nem minden, de a győzni akarás igen.", i:"https://picsum.photos/800/400?random=15"},
  {a:"Oprah Winfrey", t:"A legnagyobb kaland az, hogy megtaláld valódi önmagad.", i:"https://picsum.photos/800/400?random=16"},
@@ -382,8 +391,9 @@ let currentEdit = null; // {type:'journal'|'sport'|'book', idx: originalIndex}
 function initDOM(){
  DOM.quote = document.getElementById('quote');
  DOM.motImg = document.getElementById('motImg');
- DOM.authorPhoto = document.getElementById('authorPhoto'); // új elem
+ DOM.authorPhoto = document.getElementById('authorPhoto');
  DOM.authorTag = document.getElementById('authorTag');
+ DOM.authorCredit = document.getElementById('authorCredit');
  DOM.dailyQuote = document.getElementById('dailyQuote');
 
  DOM.journal = document.getElementById('journal');
@@ -502,6 +512,7 @@ function tab(btn,id){
  if(id==="stat") setTimeout(loadStats,200);
 }
 
+/* Frissített newQuote: mindig pravatar, ha nincs explicit kép (itt nincs) */
 function newQuote(){
  const q = quotes[Math.floor(Math.random()*quotes.length)];
  if(DOM.quote) DOM.quote.innerText = q.t;
@@ -509,13 +520,14 @@ function newQuote(){
   DOM.motImg.src = q.i;
   DOM.motImg.alt = q.t;
  }
- // author photo: ha nincs explicit p mező, generálunk egy avatar URL-t a név alapján
  if(DOM.authorPhoto){
-  const avatarUrl = q.p ? q.p : ('https://i.pravatar.cc/100?u=' + encodeURIComponent(q.a));
+  // mindig pravatar alapú avatar a szerző neve szerint
+  const avatarUrl = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(q.a);
   DOM.authorPhoto.src = avatarUrl;
   DOM.authorPhoto.alt = q.a;
  }
  if(DOM.authorTag) DOM.authorTag.innerText = q.a;
+ if(DOM.authorCredit) DOM.authorCredit.innerHTML = '';
  if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
 }
 
@@ -570,12 +582,10 @@ function switchStat(m){
 
 function loadStats(){
  const now = Date.now(), week = 7 * 864e5;
- // beolvassuk az eredeti tömböket
  const j = JSON.parse(localStorage.getItem('journal') || "[]");
  const s = JSON.parse(localStorage.getItem('sport') || "[]");
  const b = JSON.parse(localStorage.getItem('book') || "[]");
 
- // adjuk hozzá az eredeti indexet (_idx), hogy a szerkesztés/törlés pontosan az eredeti tömbre hivatkozzon
  const jWithIdx = j.map((x,i) => ({...x, _idx: i}));
  const sWithIdx = s.map((x,i) => ({...x, _idx: i}));
  const bWithIdx = b.map((x,i) => ({...x, _idx: i}));
@@ -597,7 +607,6 @@ function loadStats(){
   });
  }
 
- // Render lists, használjuk az eredeti tömb indexét (_idx) data-idxként
  if(DOM.statJournalList) DOM.statJournalList.innerHTML = jf.map(x => `
   <div class="card">
     ${escapeHtml(truncate(x.text, 200))}
@@ -632,7 +641,6 @@ function loadStats(){
 /* Modal szerkesztés */
 function openEditModal(type, originalIdx){
  currentEdit = {type, idx: originalIdx};
- // mutassuk a megfelelő mezőt
  DOM.modalFieldJournal.style.display = 'none';
  DOM.modalFieldSport.style.display = 'none';
  DOM.modalFieldBook.style.display = 'none';
