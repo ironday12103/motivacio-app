@@ -138,7 +138,7 @@ button{
 
 <div id="mot" class="view active">
  <div class="motivation-card">
-  <img id="motImg">
+  <img id="motImg" alt="Motivációs kép">
   <div id="authorTag"></div>
   <div class="big-quote" id="quote"></div>
  </div>
@@ -181,6 +181,14 @@ button{
 </div>
 
 <script>
+/*
+ Javított változat:
+ - Explicit DOM lekérések (document.getElementById), nem az id-kből képzett globális változókra támaszkodva.
+ - localStorage.getItem/setItem használata.
+ - Chart.js-nek egyértelmű canvas elemet adunk.
+ - Alap validációk és kis UX javítások (mezők törlése mentés után, alt attribútum).
+*/
+
 const quotes=[
  {a:"David Goggins",t:"A fájdalom ideiglenes.",i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
  {a:"Elon Musk",t:"Ha fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
@@ -188,6 +196,37 @@ const quotes=[
 
 let statMode="week";
 let statChartObj=null;
+
+// Objektum a DOM elemek tárolására
+const DOM = {};
+
+function initDOM(){
+ DOM.quote = document.getElementById('quote');
+ DOM.motImg = document.getElementById('motImg');
+ DOM.authorTag = document.getElementById('authorTag');
+ DOM.dailyQuote = document.getElementById('dailyQuote');
+
+ DOM.journal = document.getElementById('journal');
+ DOM.charCount = document.getElementById('charCount');
+ DOM.saveJournalBtn = document.getElementById('saveJournalBtn');
+
+ DOM.stype = document.getElementById('stype');
+
+ DOM.btitle = document.getElementById('btitle');
+
+ DOM.weekBtn = document.getElementById('weekBtn');
+ DOM.yearBtn = document.getElementById('yearBtn');
+
+ DOM.statWrite = document.getElementById('statWrite');
+ DOM.statSport = document.getElementById('statSport');
+ DOM.statBook = document.getElementById('statBook');
+
+ DOM.statJournalList = document.getElementById('statJournalList');
+ DOM.statSportList = document.getElementById('statSportList');
+ DOM.statBookList = document.getElementById('statBookList');
+
+ DOM.statChart = document.getElementById('statChart');
+}
 
 function tab(btn,id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
@@ -199,72 +238,110 @@ function tab(btn,id){
 
 function newQuote(){
  let q=quotes[Math.floor(Math.random()*quotes.length)];
- quote.innerText=q.t;
- motImg.src=q.i;
- authorTag.innerText=q.a;
- dailyQuote.innerText=q.t+" – "+q.a;
+ if(DOM.quote) DOM.quote.innerText=q.t;
+ if(DOM.motImg){
+  DOM.motImg.src=q.i;
+  DOM.motImg.alt = q.t;
+ }
+ if(DOM.authorTag) DOM.authorTag.innerText=q.a;
+ if(DOM.dailyQuote) DOM.dailyQuote.innerText=q.t+" – "+q.a;
 }
 
 function countJournalChars(){
- charCount.innerText=journal.value.length;
- saveJournalBtn.disabled = journal.value.length < 90;
+ if(!DOM.charCount || !DOM.journal || !DOM.saveJournalBtn) return;
+ const len = DOM.journal.value.length;
+ DOM.charCount.innerText = len;
+ DOM.saveJournalBtn.disabled = len < 90;
 }
 
 function saveJournal(){
- if(journal.value.length<90) return;
- let j=JSON.parse(localStorage.journal||"[]");
- j.push({text:journal.value,date:Date.now()});
- localStorage.journal=JSON.stringify(j);
- journal.value="";
+ if(!DOM.journal) return;
+ if(DOM.journal.value.length<90) return;
+ let j = JSON.parse(localStorage.getItem('journal') || "[]");
+ j.push({text:DOM.journal.value,date:Date.now()});
+ localStorage.setItem('journal', JSON.stringify(j));
+ DOM.journal.value="";
  countJournalChars();
+ // frissítsük a stat nézetet ha nyitva van
+ if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
 function saveSport(){
- let s=JSON.parse(localStorage.sport||"[]");
- s.push({type:stype.value,date:Date.now()});
- localStorage.sport=JSON.stringify(s);
+ if(!DOM.stype) return;
+ const type = DOM.stype.value ? DOM.stype.value.trim() : "";
+ if(!type) return; // ne mentsünk üres típust
+ let s = JSON.parse(localStorage.getItem('sport') || "[]");
+ s.push({type:type,date:Date.now()});
+ localStorage.setItem('sport', JSON.stringify(s));
+ // frissítsük a stat nézetet ha nyitva van
+ if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
 function saveBook(){
- let b=JSON.parse(localStorage.book||"[]");
- b.push({title:btitle.value,date:Date.now()});
- localStorage.book=JSON.stringify(b);
+ if(!DOM.btitle) return;
+ const title = DOM.btitle.value ? DOM.btitle.value.trim() : "";
+ if(!title) return; // ne mentsünk üres címet
+ let b = JSON.parse(localStorage.getItem('book') || "[]");
+ b.push({title:title,date:Date.now()});
+ localStorage.setItem('book', JSON.stringify(b));
+ DOM.btitle.value="";
+ if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
 function switchStat(m){
  statMode=m;
- weekBtn.classList.toggle("active",m==="week");
- yearBtn.classList.toggle("active",m==="year");
+ if(DOM.weekBtn) DOM.weekBtn.classList.toggle("active",m==="week");
+ if(DOM.yearBtn) DOM.yearBtn.classList.toggle("active",m==="year");
  loadStats();
 }
 
 function loadStats(){
  const now=Date.now(),week=7*864e5;
- const j=JSON.parse(localStorage.journal||"[]");
- const s=JSON.parse(localStorage.sport||"[]");
- const b=JSON.parse(localStorage.book||"[]");
+ const j=JSON.parse(localStorage.getItem('journal') || "[]");
+ const s=JSON.parse(localStorage.getItem('sport') || "[]");
+ const b=JSON.parse(localStorage.getItem('book') || "[]");
 
  const jf=statMode==="week"?j.filter(x=>now-x.date<week):j;
  const sf=statMode==="week"?s.filter(x=>now-x.date<week):s;
  const bf=statMode==="week"?b.filter(x=>now-x.date<week):b;
 
- statWrite.innerText=`📓 Naplók: ${jf.length}`;
- statSport.innerText=`🏋️ Edzések: ${sf.length}`;
- statBook.innerText=`📚 Könyvek: ${bf.length}`;
+ if(DOM.statWrite) DOM.statWrite.innerText=`📓 Naplók: ${jf.length}`;
+ if(DOM.statSport) DOM.statSport.innerText=`🏋️ Edzések: ${sf.length}`;
+ if(DOM.statBook) DOM.statBook.innerText=`📚 Könyvek: ${bf.length}`;
 
  if(statChartObj) statChartObj.destroy();
- statChartObj=new Chart(statChart,{
-  type:"bar",
-  data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length]}]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
- });
+ // statChart lehet canvas element, adjuk át explicit módon
+ if(DOM.statChart){
+  statChartObj=new Chart(DOM.statChart,{
+   type:"bar",
+   data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length],backgroundColor:['#ff9800','#ff5722','#9c27b0']}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  });
+ }
 
- statJournalList.innerHTML=jf.map(x=>`<div class="card">${x.text}</div>`).join("");
- statSportList.innerHTML=sf.map(x=>`<div class="card">${x.type}</div>`).join("");
- statBookList.innerHTML=bf.map(x=>`<div class="card">${x.title}</div>`).join("");
+ if(DOM.statJournalList) DOM.statJournalList.innerHTML=jf.map(x=>`<div class="card">${escapeHtml(x.text)}</div>`).join("");
+ if(DOM.statSportList) DOM.statSportList.innerHTML=sf.map(x=>`<div class="card">${escapeHtml(x.type)}</div>`).join("");
+ if(DOM.statBookList) DOM.statBookList.innerHTML=bf.map(x=>`<div class="card">${escapeHtml(x.title)}</div>`).join("");
 }
 
-newQuote();
+// egyszerű HTML escape, hogy elkerüljük az XSS megjelenítést a naplóknál
+function escapeHtml(str){
+ if(!str) return "";
+ return String(str)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+ initDOM();
+ newQuote();
+ countJournalChars();
+ // ha stat nézet aktív kezdetben, töltsük be a statisztikákat
+ if(document.getElementById('stat').classList.contains('active')) loadStats();
+});
 </script>
 </body>
 </html>
