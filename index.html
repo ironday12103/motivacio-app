@@ -42,6 +42,7 @@ body{
  background:#333;
  color:#fff;
  font-size:13px;
+ cursor:pointer;
 }
 .tabs button.active{
  background:#ff9800;
@@ -62,6 +63,7 @@ body{
  padding:10px;
  background:#333;
  color:#fff;
+ cursor:pointer;
 }
 .stat-tabs button.active{
  background:#ff9800;
@@ -106,6 +108,7 @@ textarea,input,select{
  border-radius:14px;
  border:none;
  margin-top:8px;
+ box-sizing:border-box;
 }
 
 button{
@@ -114,12 +117,19 @@ button{
  border:none;
  border-radius:14px;
  margin-top:8px;
+ cursor:pointer;
 }
 .main{background:#ff9800;color:#000;}
 .secondary{background:#333;color:#fff;}
 
 .card{background:#1d1d1d;border-radius:16px;padding:12px;margin-bottom:8px;}
 .stat-box{background:#222;border-radius:16px;padding:12px;margin-bottom:8px;}
+
+.entry-meta{font-size:12px;opacity:.85;margin-top:6px;}
+.entry-actions{margin-top:8px;display:flex;gap:6px;}
+.small-btn{flex:1;padding:8px;border-radius:10px;font-size:13px;}
+.small-danger{background:#b00020;color:#fff;}
+.small-secondary{background:#333;color:#fff;}
 </style>
 </head>
 
@@ -127,11 +137,11 @@ button{
 <div class="app">
 
 <div class="tabs">
- <button class="active" onclick="tab(this,'mot')">🔥</button>
- <button onclick="tab(this,'nap')">📓</button>
- <button onclick="tab(this,'sport')">🏋️</button>
- <button onclick="tab(this,'book')">📚</button>
- <button onclick="tab(this,'stat')">📊</button>
+ <button class="tab-btn active" data-target="mot">🔥</button>
+ <button class="tab-btn" data-target="nap">📓</button>
+ <button class="tab-btn" data-target="sport">🏋️</button>
+ <button class="tab-btn" data-target="book">📚</button>
+ <button class="tab-btn" data-target="stat">📊</button>
 </div>
 
 <div class="header-quote" id="dailyQuote"></div>
@@ -142,29 +152,29 @@ button{
   <div id="authorTag"></div>
   <div class="big-quote" id="quote"></div>
  </div>
- <button class="main" onclick="newQuote()">Új motiváció</button>
+ <button id="newQuoteBtn" class="main">Új motiváció</button>
 </div>
 
 <div id="nap" class="view">
- <textarea id="journal" placeholder="Írd le a napod..." oninput="countJournalChars()"></textarea>
+ <textarea id="journal" placeholder="Írd le a napod..." rows="6"></textarea>
  <div class="card">Karakterek: <b><span id="charCount">0</span> / 90</b></div>
- <button class="secondary" id="saveJournalBtn" onclick="saveJournal()" disabled>Mentés</button>
+ <button class="secondary" id="saveJournalBtn" disabled>Mentés</button>
 </div>
 
 <div id="sport" class="view">
  <select id="stype"><option>Futás</option><option>Súlyzós</option></select>
- <button class="secondary" onclick="saveSport()">Mentés</button>
+ <button class="secondary" id="saveSportBtn">Mentés</button>
 </div>
 
 <div id="book" class="view">
  <input id="btitle" placeholder="Könyv címe">
- <button class="secondary" onclick="saveBook()">Mentés</button>
+ <button class="secondary" id="saveBookBtn">Mentés</button>
 </div>
 
 <div id="stat" class="view">
  <div class="stat-tabs">
-  <button id="weekBtn" class="active" onclick="switchStat('week')">Heti</button>
-  <button id="yearBtn" onclick="switchStat('year')">Éves</button>
+  <button id="weekBtn" class="active">Heti</button>
+  <button id="yearBtn">Éves</button>
  </div>
 
  <canvas id="statChart"></canvas>
@@ -182,11 +192,12 @@ button{
 
 <script>
 /*
- Javított változat:
- - Explicit DOM lekérések (document.getElementById), nem az id-kből képzett globális változókra támaszkodva.
- - localStorage.getItem/setItem használata.
- - Chart.js-nek egyértelmű canvas elemet adunk.
- - Alap validációk és kis UX javítások (mezők törlése mentés után, alt attribútum).
+ Fejlesztett változat:
+ - Inline onclick helyett event listenerek.
+ - Szerkesztés és törlés funkciók naplók/edzések/könyvek esetén.
+ - Dátum formázás (hu-HU).
+ - Kép betöltési hiba kezelése (placeholder).
+ - Megőrizve: explicit DOM lekérések, localStorage.getItem/setItem, XSS elleni escape.
 */
 
 const quotes=[
@@ -196,8 +207,6 @@ const quotes=[
 
 let statMode="week";
 let statChartObj=null;
-
-// Objektum a DOM elemek tárolására
 const DOM = {};
 
 function initDOM(){
@@ -211,8 +220,10 @@ function initDOM(){
  DOM.saveJournalBtn = document.getElementById('saveJournalBtn');
 
  DOM.stype = document.getElementById('stype');
+ DOM.saveSportBtn = document.getElementById('saveSportBtn');
 
  DOM.btitle = document.getElementById('btitle');
+ DOM.saveBookBtn = document.getElementById('saveBookBtn');
 
  DOM.weekBtn = document.getElementById('weekBtn');
  DOM.yearBtn = document.getElementById('yearBtn');
@@ -226,6 +237,30 @@ function initDOM(){
  DOM.statBookList = document.getElementById('statBookList');
 
  DOM.statChart = document.getElementById('statChart');
+
+ // tab buttons
+ document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> tab(btn, btn.dataset.target));
+ });
+
+ // fő gombok
+ document.getElementById('newQuoteBtn').addEventListener('click', newQuote);
+ DOM.saveJournalBtn.addEventListener('click', saveJournal);
+ DOM.saveSportBtn.addEventListener('click', saveSport);
+ DOM.saveBookBtn.addEventListener('click', saveBook);
+
+ // stat mode
+ DOM.weekBtn.addEventListener('click', ()=>switchStat('week'));
+ DOM.yearBtn.addEventListener('click', ()=>switchStat('year'));
+
+ // input listeners
+ DOM.journal.addEventListener('input', countJournalChars);
+
+ // kép error fallback
+ DOM.motImg.addEventListener('error', ()=>{
+  // egyszerű SVG placeholder
+  DOM.motImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="#222"/><text x="50%" y="50%" fill="#ff9800" font-size="24" font-family="Arial" text-anchor="middle" alignment-baseline="middle">Kép nem elérhető</text></svg>');
+ });
 }
 
 function tab(btn,id){
@@ -256,31 +291,30 @@ function countJournalChars(){
 
 function saveJournal(){
  if(!DOM.journal) return;
- if(DOM.journal.value.length<90) return;
+ const text = DOM.journal.value.trim();
+ if(text.length < 90) return;
  let j = JSON.parse(localStorage.getItem('journal') || "[]");
- j.push({text:DOM.journal.value,date:Date.now()});
+ j.push({text:text,date:Date.now()});
  localStorage.setItem('journal', JSON.stringify(j));
  DOM.journal.value="";
  countJournalChars();
- // frissítsük a stat nézetet ha nyitva van
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
 function saveSport(){
  if(!DOM.stype) return;
  const type = DOM.stype.value ? DOM.stype.value.trim() : "";
- if(!type) return; // ne mentsünk üres típust
+ if(!type) return;
  let s = JSON.parse(localStorage.getItem('sport') || "[]");
  s.push({type:type,date:Date.now()});
  localStorage.setItem('sport', JSON.stringify(s));
- // frissítsük a stat nézetet ha nyitva van
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
 function saveBook(){
  if(!DOM.btitle) return;
  const title = DOM.btitle.value ? DOM.btitle.value.trim() : "";
- if(!title) return; // ne mentsünk üres címet
+ if(!title) return;
  let b = JSON.parse(localStorage.getItem('book') || "[]");
  b.push({title:title,date:Date.now()});
  localStorage.setItem('book', JSON.stringify(b));
@@ -290,8 +324,8 @@ function saveBook(){
 
 function switchStat(m){
  statMode=m;
- if(DOM.weekBtn) DOM.weekBtn.classList.toggle("active",m==="week");
- if(DOM.yearBtn) DOM.yearBtn.classList.toggle("active",m==="year");
+ DOM.weekBtn.classList.toggle("active",m==="week");
+ DOM.yearBtn.classList.toggle("active",m==="year");
  loadStats();
 }
 
@@ -310,7 +344,6 @@ function loadStats(){
  if(DOM.statBook) DOM.statBook.innerText=`📚 Könyvek: ${bf.length}`;
 
  if(statChartObj) statChartObj.destroy();
- // statChart lehet canvas element, adjuk át explicit módon
  if(DOM.statChart){
   statChartObj=new Chart(DOM.statChart,{
    type:"bar",
@@ -319,9 +352,104 @@ function loadStats(){
   });
  }
 
- if(DOM.statJournalList) DOM.statJournalList.innerHTML=jf.map(x=>`<div class="card">${escapeHtml(x.text)}</div>`).join("");
- if(DOM.statSportList) DOM.statSportList.innerHTML=sf.map(x=>`<div class="card">${escapeHtml(x.type)}</div>`).join("");
- if(DOM.statBookList) DOM.statBookList.innerHTML=bf.map(x=>`<div class="card">${escapeHtml(x.title)}</div>`).join("");
+ // Render lists with edit/delete and date
+ if(DOM.statJournalList) DOM.statJournalList.innerHTML = jf.map((x,i)=>`
+  <div class="card" data-idx="${i}">
+    ${escapeHtml(truncate(x.text,300))}
+    <div class="entry-meta">${formatDate(x.date)}</div>
+    <div class="entry-actions">
+      <button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${i}">Szerkeszt</button>
+      <button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${i}">Töröl</button>
+    </div>
+  </div>`).join("");
+
+ if(DOM.statSportList) DOM.statSportList.innerHTML = sf.map((x,i)=>`
+  <div class="card" data-idx="${i}">
+    ${escapeHtml(x.type)}
+    <div class="entry-meta">${formatDate(x.date)}</div>
+    <div class="entry-actions">
+      <button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${i}">Szerkeszt</button>
+      <button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${i}">Töröl</button>
+    </div>
+  </div>`).join("");
+
+ if(DOM.statBookList) DOM.statBookList.innerHTML = bf.map((x,i)=>`
+  <div class="card" data-idx="${i}">
+    ${escapeHtml(x.title)}
+    <div class="entry-meta">${formatDate(x.date)}</div>
+    <div class="entry-actions">
+      <button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${i}">Szerkeszt</button>
+      <button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${i}">Töröl</button>
+    </div>
+  </div>`).join("");
+
+ // Add event delegation for edit/delete buttons
+ ['statJournalList','statSportList','statBookList'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  // remove previous listener by cloning (simple way to avoid duplicate binds)
+  const clone = el.cloneNode(true);
+  el.parentNode.replaceChild(clone, el);
+  clone.addEventListener('click', (ev)=>{
+   const btn = ev.target.closest('button[data-action]');
+   if(!btn) return;
+   const action = btn.dataset.action;
+   const type = btn.dataset.type;
+   const idx = parseInt(btn.dataset.idx,10);
+   if(action === 'edit') editEntry(type, idx);
+   if(action === 'delete') deleteEntry(type, idx);
+  });
+ });
+}
+
+function editEntry(type, index){
+ if(!['journal','sport','book'].includes(type)) return;
+ const key = type;
+ let arr = JSON.parse(localStorage.getItem(key) || "[]");
+ if(index<0 || index>=arr.length) return;
+ const item = arr[index];
+ if(type==='journal'){
+  const newText = prompt("Szerkeszd a naplót (minimum 90 karakter):", item.text);
+  if(newText === null) return; // megszakítva
+  if(newText.trim().length < 90){ alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return; }
+  arr[index].text = newText.trim();
+ } else if(type==='sport'){
+  const newType = prompt("Szerkeszd az edzés típusát:", item.type);
+  if(newType === null) return;
+  if(!newType.trim()) return;
+  arr[index].type = newType.trim();
+ } else if(type==='book'){
+  const newTitle = prompt("Szerkeszd a könyv címét:", item.title);
+  if(newTitle === null) return;
+  if(!newTitle.trim()) return;
+  arr[index].title = newTitle.trim();
+ }
+ localStorage.setItem(key, JSON.stringify(arr));
+ loadStats();
+}
+
+function deleteEntry(type, index){
+ if(!['journal','sport','book'].includes(type)) return;
+ const key = type;
+ let arr = JSON.parse(localStorage.getItem(key) || "[]");
+ if(index<0 || index>=arr.length) return;
+ if(!confirm("Biztosan törlöd ezt a bejegyzést?")) return;
+ arr.splice(index,1);
+ localStorage.setItem(key, JSON.stringify(arr));
+ loadStats();
+}
+
+function formatDate(ts){
+ if(!ts) return "";
+ try{
+  const d = new Date(ts);
+  return d.toLocaleString('hu-HU', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+ }catch(e){ return ""; }
+}
+
+function truncate(str, max){
+ if(!str) return "";
+ return str.length>max? str.slice(0,max-1)+'…':str;
 }
 
 // egyszerű HTML escape, hogy elkerüljük az XSS megjelenítést a naplóknál
@@ -339,7 +467,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
  initDOM();
  newQuote();
  countJournalChars();
- // ha stat nézet aktív kezdetben, töltsük be a statisztikákat
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 });
 </script>
