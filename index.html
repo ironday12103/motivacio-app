@@ -192,21 +192,22 @@ button{
 
 <script>
 /*
- Fejlesztett változat:
- - Inline onclick helyett event listenerek.
- - Szerkesztés és törlés funkciók naplók/edzések/könyvek esetén.
- - Dátum formázás (hu-HU).
- - Kép betöltési hiba kezelése (placeholder).
- - Megőrizve: explicit DOM lekérések, localStorage.getItem/setItem, XSS elleni escape.
+ Véglegesített fájl a kért javításokkal:
+ - explicit DOM lekérés
+ - event listenerek (nincs inline onclick)
+ - szerkesztés/törlés funkciók
+ - weekly/year stat szűréskor is helyes szerkesztés/törlés: az eredeti tömb indexét (_idx) adjuk át
+ - localStorage getItem/setItem
+ - XSS elleni escape, date formatting, kép fallback
 */
 
-const quotes=[
- {a:"David Goggins",t:"A fájdalom ideiglenes.",i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
- {a:"Elon Musk",t:"Ha fontos, megcsinálod.",i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
+const quotes = [
+ {a:"David Goggins", t:"A fájdalom ideiglenes.", i:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438"},
+ {a:"Elon Musk", t:"Ha fontos, megcsinálod.", i:"https://images.unsplash.com/photo-1518770660439-4636190af475"}
 ];
 
-let statMode="week";
-let statChartObj=null;
+let statMode = "week";
+let statChartObj = null;
 const DOM = {};
 
 function initDOM(){
@@ -238,28 +239,41 @@ function initDOM(){
 
  DOM.statChart = document.getElementById('statChart');
 
- // tab buttons
+ // Tabs
  document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> tab(btn, btn.dataset.target));
  });
 
- // fő gombok
+ // Buttons
  document.getElementById('newQuoteBtn').addEventListener('click', newQuote);
  DOM.saveJournalBtn.addEventListener('click', saveJournal);
  DOM.saveSportBtn.addEventListener('click', saveSport);
  DOM.saveBookBtn.addEventListener('click', saveBook);
 
- // stat mode
- DOM.weekBtn.addEventListener('click', ()=>switchStat('week'));
- DOM.yearBtn.addEventListener('click', ()=>switchStat('year'));
+ // Stat mode
+ DOM.weekBtn.addEventListener('click', ()=> switchStat('week'));
+ DOM.yearBtn.addEventListener('click', ()=> switchStat('year'));
 
- // input listeners
+ // Inputs
  DOM.journal.addEventListener('input', countJournalChars);
 
- // kép error fallback
+ // Image error fallback
  DOM.motImg.addEventListener('error', ()=>{
-  // egyszerű SVG placeholder
   DOM.motImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="#222"/><text x="50%" y="50%" fill="#ff9800" font-size="24" font-family="Arial" text-anchor="middle" alignment-baseline="middle">Kép nem elérhető</text></svg>');
+ });
+
+ // Delegált click listener a szerkesztés/törlés gombokra
+ [DOM.statJournalList, DOM.statSportList, DOM.statBookList].forEach(listEl => {
+  if(!listEl) return;
+  listEl.addEventListener('click', (ev)=>{
+   const btn = ev.target.closest('button[data-action]');
+   if(!btn) return;
+   const action = btn.dataset.action;
+   const type = btn.dataset.type;
+   const idx = parseInt(btn.dataset.idx, 10);
+   if(action === 'edit') editEntry(type, idx);
+   if(action === 'delete') deleteEntry(type, idx);
+  });
  });
 }
 
@@ -272,14 +286,14 @@ function tab(btn,id){
 }
 
 function newQuote(){
- let q=quotes[Math.floor(Math.random()*quotes.length)];
- if(DOM.quote) DOM.quote.innerText=q.t;
+ const q = quotes[Math.floor(Math.random()*quotes.length)];
+ if(DOM.quote) DOM.quote.innerText = q.t;
  if(DOM.motImg){
-  DOM.motImg.src=q.i;
+  DOM.motImg.src = q.i;
   DOM.motImg.alt = q.t;
  }
- if(DOM.authorTag) DOM.authorTag.innerText=q.a;
- if(DOM.dailyQuote) DOM.dailyQuote.innerText=q.t+" – "+q.a;
+ if(DOM.authorTag) DOM.authorTag.innerText = q.a;
+ if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
 }
 
 function countJournalChars(){
@@ -292,11 +306,11 @@ function countJournalChars(){
 function saveJournal(){
  if(!DOM.journal) return;
  const text = DOM.journal.value.trim();
- if(text.length < 90) return;
+ if(text.length < 90){ alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return; }
  let j = JSON.parse(localStorage.getItem('journal') || "[]");
- j.push({text:text,date:Date.now()});
+ j.push({text:text, date:Date.now()});
  localStorage.setItem('journal', JSON.stringify(j));
- DOM.journal.value="";
+ DOM.journal.value = "";
  countJournalChars();
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
@@ -304,9 +318,9 @@ function saveJournal(){
 function saveSport(){
  if(!DOM.stype) return;
  const type = DOM.stype.value ? DOM.stype.value.trim() : "";
- if(!type) return;
+ if(!type){ alert("Adj meg egy edzés típust."); return; }
  let s = JSON.parse(localStorage.getItem('sport') || "[]");
- s.push({type:type,date:Date.now()});
+ s.push({type:type, date:Date.now()});
  localStorage.setItem('sport', JSON.stringify(s));
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
@@ -314,127 +328,115 @@ function saveSport(){
 function saveBook(){
  if(!DOM.btitle) return;
  const title = DOM.btitle.value ? DOM.btitle.value.trim() : "";
- if(!title) return;
+ if(!title){ alert("Adj meg egy könyvcímet."); return; }
  let b = JSON.parse(localStorage.getItem('book') || "[]");
- b.push({title:title,date:Date.now()});
+ b.push({title:title, date:Date.now()});
  localStorage.setItem('book', JSON.stringify(b));
- DOM.btitle.value="";
+ DOM.btitle.value = "";
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 }
 
 function switchStat(m){
- statMode=m;
- DOM.weekBtn.classList.toggle("active",m==="week");
- DOM.yearBtn.classList.toggle("active",m==="year");
+ statMode = m;
+ DOM.weekBtn.classList.toggle("active", m==="week");
+ DOM.yearBtn.classList.toggle("active", m==="year");
  loadStats();
 }
 
 function loadStats(){
- const now=Date.now(),week=7*864e5;
- const j=JSON.parse(localStorage.getItem('journal') || "[]");
- const s=JSON.parse(localStorage.getItem('sport') || "[]");
- const b=JSON.parse(localStorage.getItem('book') || "[]");
+ const now = Date.now(), week = 7 * 864e5;
+ // beolvassuk az eredeti tömböket
+ const j = JSON.parse(localStorage.getItem('journal') || "[]");
+ const s = JSON.parse(localStorage.getItem('sport') || "[]");
+ const b = JSON.parse(localStorage.getItem('book') || "[]");
 
- const jf=statMode==="week"?j.filter(x=>now-x.date<week):j;
- const sf=statMode==="week"?s.filter(x=>now-x.date<week):s;
- const bf=statMode==="week"?b.filter(x=>now-x.date<week):b;
+ // adjuk hozzá az eredeti indexet (_idx), hogy a szerkesztés/törlés pontosan az eredeti tömbre hivatkozzon
+ const jWithIdx = j.map((x,i) => ({...x, _idx: i}));
+ const sWithIdx = s.map((x,i) => ({...x, _idx: i}));
+ const bWithIdx = b.map((x,i) => ({...x, _idx: i}));
 
- if(DOM.statWrite) DOM.statWrite.innerText=`📓 Naplók: ${jf.length}`;
- if(DOM.statSport) DOM.statSport.innerText=`🏋️ Edzések: ${sf.length}`;
- if(DOM.statBook) DOM.statBook.innerText=`📚 Könyvek: ${bf.length}`;
+ const jf = statMode === "week" ? jWithIdx.filter(x => now - x.date < week) : jWithIdx;
+ const sf = statMode === "week" ? sWithIdx.filter(x => now - x.date < week) : sWithIdx;
+ const bf = statMode === "week" ? bWithIdx.filter(x => now - x.date < week) : bWithIdx;
+
+ if(DOM.statWrite) DOM.statWrite.innerText = `📓 Naplók: ${jf.length}`;
+ if(DOM.statSport) DOM.statSport.innerText = `🏋️ Edzések: ${sf.length}`;
+ if(DOM.statBook) DOM.statBook.innerText = `📚 Könyvek: ${bf.length}`;
 
  if(statChartObj) statChartObj.destroy();
  if(DOM.statChart){
-  statChartObj=new Chart(DOM.statChart,{
-   type:"bar",
-   data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length],backgroundColor:['#ff9800','#ff5722','#9c27b0']}]},
-   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  statChartObj = new Chart(DOM.statChart, {
+   type: "bar",
+   data: { labels: ["Napló","Edzés","Könyv"], datasets: [{ data: [jf.length, sf.length, bf.length], backgroundColor: ['#ff9800','#ff5722','#9c27b0'] }] },
+   options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
   });
  }
 
- // Render lists with edit/delete and date
- if(DOM.statJournalList) DOM.statJournalList.innerHTML = jf.map((x,i)=>`
-  <div class="card" data-idx="${i}">
-    ${escapeHtml(truncate(x.text,300))}
+ // Render lists, használjuk az eredeti tömb indexét (_idx) data-idxként
+ if(DOM.statJournalList) DOM.statJournalList.innerHTML = jf.map(x => `
+  <div class="card">
+    ${escapeHtml(truncate(x.text, 100))}
     <div class="entry-meta">${formatDate(x.date)}</div>
     <div class="entry-actions">
-      <button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${i}">Szerkeszt</button>
-      <button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${i}">Töröl</button>
+      <button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button>
+      <button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${x._idx}">Töröl</button>
     </div>
   </div>`).join("");
 
- if(DOM.statSportList) DOM.statSportList.innerHTML = sf.map((x,i)=>`
-  <div class="card" data-idx="${i}">
+ if(DOM.statSportList) DOM.statSportList.innerHTML = sf.map(x => `
+  <div class="card">
     ${escapeHtml(x.type)}
     <div class="entry-meta">${formatDate(x.date)}</div>
     <div class="entry-actions">
-      <button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${i}">Szerkeszt</button>
-      <button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${i}">Töröl</button>
+      <button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${x._idx}">Szerkeszt</button>
+      <button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${x._idx}">Töröl</button>
     </div>
   </div>`).join("");
 
- if(DOM.statBookList) DOM.statBookList.innerHTML = bf.map((x,i)=>`
-  <div class="card" data-idx="${i}">
+ if(DOM.statBookList) DOM.statBookList.innerHTML = bf.map(x => `
+  <div class="card">
     ${escapeHtml(x.title)}
     <div class="entry-meta">${formatDate(x.date)}</div>
     <div class="entry-actions">
-      <button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${i}">Szerkeszt</button>
-      <button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${i}">Töröl</button>
+      <button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${x._idx}">Szerkeszt</button>
+      <button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${x._idx}">Töröl</button>
     </div>
   </div>`).join("");
-
- // Add event delegation for edit/delete buttons
- ['statJournalList','statSportList','statBookList'].forEach(id=>{
-  const el = document.getElementById(id);
-  if(!el) return;
-  // remove previous listener by cloning (simple way to avoid duplicate binds)
-  const clone = el.cloneNode(true);
-  el.parentNode.replaceChild(clone, el);
-  clone.addEventListener('click', (ev)=>{
-   const btn = ev.target.closest('button[data-action]');
-   if(!btn) return;
-   const action = btn.dataset.action;
-   const type = btn.dataset.type;
-   const idx = parseInt(btn.dataset.idx,10);
-   if(action === 'edit') editEntry(type, idx);
-   if(action === 'delete') deleteEntry(type, idx);
-  });
- });
 }
 
-function editEntry(type, index){
+function editEntry(type, originalIdx){
  if(!['journal','sport','book'].includes(type)) return;
  const key = type;
  let arr = JSON.parse(localStorage.getItem(key) || "[]");
- if(index<0 || index>=arr.length) return;
- const item = arr[index];
- if(type==='journal'){
+ if(originalIdx < 0 || originalIdx >= arr.length) return;
+ const item = arr[originalIdx];
+ if(type === 'journal'){
   const newText = prompt("Szerkeszd a naplót (minimum 90 karakter):", item.text);
-  if(newText === null) return; // megszakítva
+  if(newText === null) return;
   if(newText.trim().length < 90){ alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return; }
-  arr[index].text = newText.trim();
- } else if(type==='sport'){
+  arr[originalIdx].text = newText.trim();
+ } else if(type === 'sport'){
   const newType = prompt("Szerkeszd az edzés típusát:", item.type);
   if(newType === null) return;
   if(!newType.trim()) return;
-  arr[index].type = newType.trim();
- } else if(type==='book'){
+  arr[originalIdx].type = newType.trim();
+ } else if(type === 'book'){
   const newTitle = prompt("Szerkeszd a könyv címét:", item.title);
   if(newTitle === null) return;
   if(!newTitle.trim()) return;
-  arr[index].title = newTitle.trim();
+  arr[originalIdx].title = newTitle.trim();
  }
  localStorage.setItem(key, JSON.stringify(arr));
  loadStats();
 }
 
-function deleteEntry(type, index){
+function deleteEntry(type, originalIdx){
  if(!['journal','sport','book'].includes(type)) return;
  const key = type;
  let arr = JSON.parse(localStorage.getItem(key) || "[]");
- if(index<0 || index>=arr.length) return;
+ if(originalIdx < 0 || originalIdx >= arr.length) return;
  if(!confirm("Biztosan törlöd ezt a bejegyzést?")) return;
- arr.splice(index,1);
+ arr.splice(originalIdx, 1);
  localStorage.setItem(key, JSON.stringify(arr));
  loadStats();
 }
@@ -449,10 +451,9 @@ function formatDate(ts){
 
 function truncate(str, max){
  if(!str) return "";
- return str.length>max? str.slice(0,max-1)+'…':str;
+ return str.length > max ? str.slice(0, max-1) + '…' : str;
 }
 
-// egyszerű HTML escape, hogy elkerüljük az XSS megjelenítést a naplóknál
 function escapeHtml(str){
  if(!str) return "";
  return String(str)
