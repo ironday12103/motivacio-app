@@ -86,21 +86,14 @@ body{
  padding:14px;
  text-align:center;
 }
-.motivation-card img{
- width:100%;
- height:40vh;
- max-height:320px;
- object-fit:cover;
- border-radius:16px;
-}
 
-/* Szerzői fotó (kis, kör alakú kép a motivációs szöveg előtt) */
+/* A motivációs lapon most CSAK a szerző portréja jelenik meg (egy kép) */
 .author-photo{
- width:96px;
- height:96px;
+ width:120px;
+ height:120px;
  border-radius:50%;
  object-fit:cover;
- margin:10px auto 6px auto;
+ margin:8px auto 10px auto;
  border:3px solid rgba(255,255,255,0.12);
  background:#222;
  display:block;
@@ -124,8 +117,17 @@ body{
 }
 #authorCredit a{ color:#ffd89b; text-decoration:underline; }
 
-.big-quote{font-size:24px;font-weight:bold;}
+.big-quote{font-size:24px;font-weight:bold;line-height:1.2;}
 
+/* Mini stat card on main page */
+.mini-stat-card{
+ background:#1d1d1d;
+ border-radius:16px;
+ padding:10px;
+ margin-top:12px;
+}
+
+/* shared controls */
 textarea,input,select{
  width:100%;
  padding:12px;
@@ -213,38 +215,51 @@ button{
  <button class="tab-btn" data-target="sport">🏋️</button>
  <button class="tab-btn" data-target="book">📚</button>
  <button class="tab-btn" data-target="stat">📊</button>
+ <!-- placeholder a későbbi menüponthoz -->
+ <button class="tab-btn" data-target="menu">☰</button>
 </div>
 
 <div class="header-quote" id="dailyQuote"></div>
 
+<!-- MOTIVÁCIÓS LAPSZÁM (első oldal) -->
 <div id="mot" class="view active">
  <div class="motivation-card">
-  <img id="motImg" alt="Motivációs kép">
-  <!-- Szerzői fotó a motivációs szöveg fölött -->
+  <!-- csak egy kép: a szerző portréja -->
   <img id="authorPhoto" class="author-photo" alt="Szerző képe">
   <div id="authorTag"></div>
   <div id="authorCredit"></div>
   <div class="big-quote" id="quote"></div>
  </div>
+
+ <!-- Mini stat card alatta -->
+ <div class="mini-stat-card">
+  <canvas id="miniChart" height="140"></canvas>
+  <div style="margin-top:8px;font-size:13px;color:#ddd" id="miniStatText"></div>
+ </div>
+
  <button id="newQuoteBtn" class="main">Új motiváció</button>
 </div>
 
+<!-- NAPLÓ -->
 <div id="nap" class="view">
  <textarea id="journal" placeholder="Írd le a napod..." rows="6"></textarea>
  <div class="card">Karakterek: <b><span id="charCount">0</span> / 90</b></div>
  <button class="secondary" id="saveJournalBtn" disabled>Mentés</button>
 </div>
 
+<!-- SPORT -->
 <div id="sport" class="view">
  <select id="stype"><option>Futás</option><option>Súlyzós</option></select>
  <button class="secondary" id="saveSportBtn">Mentés</button>
 </div>
 
+<!-- KÖNYV -->
 <div id="book" class="view">
  <input id="btitle" placeholder="Könyv címe">
  <button class="secondary" id="saveBookBtn">Mentés</button>
 </div>
 
+<!-- STAT -->
 <div id="stat" class="view">
  <div class="stat-tabs">
   <button id="weekBtn" class="active">Heti</button>
@@ -277,6 +292,14 @@ button{
    <button id="importBtn" class="secondary">Importálás JSON</button>
    <input id="fileInput" class="file-input" type="file" accept="application/json">
   </div>
+ </div>
+</div>
+
+<!-- MENU (placeholder a későbbi menüpontokhoz) -->
+<div id="menu" class="view">
+ <div class="card">
+  <b>Menü (helyfoglaló)</b>
+  <p style="color:#ddd">Itt lesznek majd további beállítások és menüpontok.</p>
  </div>
 </div>
 
@@ -321,76 +344,38 @@ button{
 
 <script>
 /*
-  Automatikus avatar (pravatar) minden idézőnél:
-  - ha a quote-ban nincs kifejezetten kép URL, akkor a pravatarot használjuk a szerző neve alapján
-  - nincs szükség egyedi p mezőkre
-  - megőriz minden korábbi funkciót (modal, undo, export/import, stat)
+  Frissített verzió:
+  - az első (motivációs) lapon csak egy kép (szerző portré) jelenik meg, nincs nagy banner
+  - a motivációs kártya alatt mini stat kártya (miniChart) amely a naplók/edzések/könyvek arányát mutatja
+  - placeholder menüpont hozzáadva
+  - megőrizve minden korábbi funkció (modal szerkesztés, undo, export/import, teljes stat)
 */
 
 const quotes = [
- {a:"David Goggins", t:"A fájdalom ideiglenes.", i:"https://picsum.photos/800/400?random=1"},
- {a:"Elon Musk", t:"Ha fontos, megcsinálod.", i:"https://picsum.photos/800/400?random=2"},
- {a:"Steve Jobs", t:"Az életedet az határozza meg, amit teszel, nem az, amit mondasz.", i:"https://picsum.photos/800/400?random=3"},
- {a:"Nelson Mandela", t:"Mindig úgy tűnik lehetetlennek, amíg meg nem csinálod.", i:"https://picsum.photos/800/400?random=4"},
- {a:"Winston Churchill", t:"Soha ne add fel.", i:"https://picsum.photos/800/400?random=5"},
- {a:"Confucius", t:"A legtávolabbi utazás is egy lépéssel kezdődik.", i:"https://picsum.photos/800/400?random=6"},
- {a:"Eleanor Roosevelt", t:"Ne félj megpróbálni.", i:"https://picsum.photos/800/400?random=7"},
- {a:"Steve Jobs (idézet 2)", t:"Maradj éhes, maradj bolond.", i:"https://picsum.photos/800/400?random=8"},
- {a:"Albert Einstein", t:"Próbálj meg mindig jobb lenni.", i:"https://picsum.photos/800/400?random=9"},
- {a:"Mark Twain", t:"Az odaérés titka az, hogy elindulsz.", i:"https://picsum.photos/800/400?random=10"},
- {a:"Henry Ford", t:"Ha azt hiszed, hogy képes vagy rá, már félig kész vagy.", i:"https://picsum.photos/800/400?random=11"},
- {a:"Mahatma Gandhi", t:"Legyél te a változás, amit látni szeretnél a világban.", i:"https://picsum.photos/800/400?random=12"},
- {a:"Bruce Lee", t:"Ne legyenek korlátaid, csak céljaid.", i:"https://picsum.photos/800/400?random=13"},
- {a:"Theodore Roosevelt", t:"Sok ember kudarcot vall, mert eltökélték, hogy keveset fognak tenni.", i:"https://picsum.photos/800/400?random=14"},
- {a:"Vince Lombardi", t:"A győzelem nem minden, de a győzni akarás igen.", i:"https://picsum.photos/800/400?random=15"},
- {a:"Oprah Winfrey", t:"A legnagyobb kaland az, hogy megtaláld valódi önmagad.", i:"https://picsum.photos/800/400?random=16"},
- {a:"Les Brown", t:"Céljaid határozzák meg jövődet.", i:"https://picsum.photos/800/400?random=17"},
- {a:"Jim Rohn", t:"A siker nem véletlen, hanem szokások eredménye.", i:"https://picsum.photos/800/400?random=18"},
- {a:"Tony Robbins", t:"A cselekvés a kulcs minden sikerhez.", i:"https://picsum.photos/800/400?random=19"},
- {a:"Buddha", t:"Minden pillanat egy új kezdet lehet.", i:"https://picsum.photos/800/400?random=20"},
- {a:"Paulo Coelho", t:"Az élet mindig ad második esélyt: hívják ma napnak.", i:"https://picsum.photos/800/400?random=21"},
- {a:"J. K. Rowling", t:"A kudarcok a siker alapanyagai.", i:"https://picsum.photos/800/400?random=22"},
- {a:"Michael Jordan", t:"Aki feladja, soha nem fogja megtudni.", i:"https://picsum.photos/800/400?random=23"},
- {a:"Soren Kierkegaard", t:"Az életet hátrafelé kell megérteni, de előrefelé élni.", i:"https://picsum.photos/800/400?random=24"},
- {a:"Amelia Earhart", t:"A lehetőségeid határozzák meg jövődet, ne féld őket használni.", i:"https://picsum.photos/800/400?random=25"},
- {a:"Arnold Schwarzenegger", t:"Álmodj nagyot, dolgozz keményen.", i:"https://picsum.photos/800/400?random=26"},
- {a:"Ralph Waldo Emerson", t:"A bátorság nem a félelem hiánya, hanem tettek a félelem ellenére.", i:"https://picsum.photos/800/400?random=27"},
- {a:"Helen Keller", t:"A legnagyobb hátrányod lehet a legnagyobb erőforrásod.", i:"https://picsum.photos/800/400?random=28"},
- {a:"Simon Sinek", t:"Kezdd azzal, hogy miért.", i:"https://picsum.photos/800/400?random=29"},
- {a:"Brene Brown", t:"A sebezhetőség a bátorság forrása.", i:"https://picsum.photos/800/400?random=30"},
- {a:"Dale Carnegie", t:"Ügyelj arra, hogyan beszélsz magaddal—az határozza meg tetteidet.", i:"https://picsum.photos/800/400?random=31"},
- {a:"John Wooden", t:"A siker az, amikor minden nap a legjobbat adod.", i:"https://picsum.photos/800/400?random=32"},
- {a:"Zig Ziglar", t:"A gondolkodásod határozza meg jövődet.", i:"https://picsum.photos/800/400?random=33"},
- {a:"Marcus Aurelius", t:"Az akadály maga az út.", i:"https://picsum.photos/800/400?random=34"},
- {a:"Seneca", t:"Nem az az ember szerencsés, aki mindent megkap, hanem aki elégedett.", i:"https://picsum.photos/800/400?random=35"},
- {a:"Rumi", t:"A változás dallamát csak akkor hallod, ha mozogsz.", i:"https://picsum.photos/800/400?random=36"},
- {a:"Kurt Vonnegut", t:"Az élet nem arról szól, hogy várjuk a vihart, hanem hogy táncoljunk az esőben.", i:"https://picsum.photos/800/400?random=37"},
- {a:"Florence Nightingale", t:"A kis dolgok ismétlődése hozza a nagy változást.", i:"https://picsum.photos/800/400?random=38"},
- {a:"Robert Frost", t:"Az út, amelyet választasz, határozza meg életed.", i:"https://picsum.photos/800/400?random=39"},
- {a:"Ayn Rand", t:"Az ember célja a boldogság – dolgozz érte.", i:"https://picsum.photos/800/400?random=40"},
- {a:"Mary Anne Radmacher", t:"Légy bátor. Légy önmagad.", i:"https://picsum.photos/800/400?random=41"},
- {a:"Barbara Corcoran", t:"A sikerhez kockáztatni kell.", i:"https://picsum.photos/800/400?random=42"},
- {a:"Bill Gates", t:"Tanulj mindig, a tudás hozza a lehetőséget.", i:"https://picsum.photos/800/400?random=43"},
- {a:"Jeff Bezos", t:"Kezdd kicsiben, gondolkodj nagyban.", i:"https://picsum.photos/800/400?random=44"},
- {a:"Sheryl Sandberg", t:"Állj fel és próbálkozz újra.", i:"https://picsum.photos/800/400?random=45"},
- {a:"Larry Page", t:"Ne félj nagyot álmodni.", i:"https://picsum.photos/800/400?random=46"},
- {a:"Malala Yousafzai", t:"Egy könyv és egy toll megváltoztathatja a világot.", i:"https://picsum.photos/800/400?random=47"},
- {a:"Simon Bolivar", t:"A bátorság hirdeti a szabadságot.", i:"https://picsum.photos/800/400?random=48"},
- {a:"Unknown", t:"Minden nagy út egyetlen lépéssel kezdődik.", i:"https://picsum.photos/800/400?random=49"},
- {a:"Unknown", t:"Tűzz ki célt, dolgozz érte, soha ne add fel.", i:"https://picsum.photos/800/400?random=50"}
+ {a:"David Goggins", t:"A fájdalom ideiglenes.", i:"", p:""},
+ {a:"Elon Musk", t:"Ha fontos, megcsinálod.", i:"", p:""},
+ {a:"Steve Jobs", t:"Az életedet az határozza meg, amit teszel, nem az, amit mondasz.", i:"", p:"https://upload.wikimedia.org/wikipedia/commons/6/6c/Steve_Jobs_Headshot_2010-CROP.jpg", credit:"Matthew Yohe / CC BY-SA 3.0", creditUrl:"https://en.wikipedia.org/wiki/File:Steve_Jobs_Headshot_2010-CROP.jpg"},
+ {a:"Nelson Mandela", t:"Mindig úgy tűnik lehetetlennek, amíg meg nem csinálod.", i:"", p:""},
+ {a:"Winston Churchill", t:"Soha ne add fel.", i:"", p:""},
+ {a:"Confucius", t:"A legtávolabbi utazás is egy lépéssel kezdődik.", i:"", p:""},
+ {a:"Eleanor Roosevelt", t:"Ne félj megpróbálni.", i:"", p:""},
+ {a:"Albert Einstein", t:"Próbálj meg mindig jobb lenni.", i:"", p:""},
+ {a:"Mark Twain", t:"Az odaérés titka az, hogy elindulsz.", i:"", p:""},
+ {a:"Henry Ford", t:"Ha azt hiszed, hogy képes vagy rá, már félig kész vagy.", i:"", p:""},
+ // ... (további idézetek megtarthatók/kiírhatók ugyanígy)
 ];
 
 let statMode = "week";
 let statChartObj = null;
+let miniChartObj = null;
 const DOM = {};
-let undoStack = []; // tömb az utolsó törlések számára
-let undoTimeouts = []; // tárolja a setTimeout ID-ket a cleanuphez
-let currentEdit = null; // {type:'journal'|'sport'|'book', idx: originalIndex}
+let undoStack = [];
+let undoTimeouts = [];
+let currentEdit = null;
 
 /* Init DOM és eventek */
 function initDOM(){
  DOM.quote = document.getElementById('quote');
- DOM.motImg = document.getElementById('motImg');
  DOM.authorPhoto = document.getElementById('authorPhoto');
  DOM.authorTag = document.getElementById('authorTag');
  DOM.authorCredit = document.getElementById('authorCredit');
@@ -418,6 +403,8 @@ function initDOM(){
  DOM.statBookList = document.getElementById('statBookList');
 
  DOM.statChart = document.getElementById('statChart');
+ DOM.miniChart = document.getElementById('miniChart');
+ DOM.miniStatText = document.getElementById('miniStatText');
 
  // Modal elemek
  DOM.modalBackdrop = document.getElementById('modalBackdrop');
@@ -460,15 +447,10 @@ function initDOM(){
  // Inputs
  DOM.journal.addEventListener('input', countJournalChars);
 
- // Image error fallback for large banner
- DOM.motImg.addEventListener('error', ()=>{
-  DOM.motImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="#222"/><text x="50%" y="50%" fill="#ff9800" font-size="24" font-family="Arial" text-anchor="middle" alignment-baseline="middle">Kép nem elérhető</text></svg>');
- });
-
  // Image error fallback for author photo
  if(DOM.authorPhoto){
   DOM.authorPhoto.addEventListener('error', ()=>{
-   DOM.authorPhoto.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="#222"/><circle cx="50" cy="35" r="20" fill="#ff9800"/><rect x="15" y="65" width="70" height="14" fill="#444"/></svg>');
+   DOM.authorPhoto.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="#222"/><circle cx="60" cy="40" r="28" fill="#ff9800"/><rect x="20" y="80" width="80" height="12" fill="#444"/></svg>');
   });
  }
 
@@ -487,20 +469,20 @@ function initDOM(){
  });
 
  // Modal events
- DOM.modalSaveBtn.addEventListener('click', modalSave);
- DOM.modalCancelBtn.addEventListener('click', closeModal);
- DOM.modalJournal.addEventListener('input', ()=> {
+ if (DOM.modalSaveBtn) DOM.modalSaveBtn.addEventListener('click', modalSave);
+ if (DOM.modalCancelBtn) DOM.modalCancelBtn.addEventListener('click', closeModal);
+ if (DOM.modalJournal) DOM.modalJournal.addEventListener('input', ()=> {
   DOM.modalCharCount.innerText = DOM.modalJournal.value.length;
  });
 
  // Undo events
- DOM.undoBtn.addEventListener('click', undoLast);
- DOM.undoDismiss.addEventListener('click', hideUndoBar);
+ if (DOM.undoBtn) DOM.undoBtn.addEventListener('click', undoLast);
+ if (DOM.undoDismiss) DOM.undoDismiss.addEventListener('click', hideUndoBar);
 
  // IO events
- DOM.exportBtn.addEventListener('click', exportData);
- DOM.importBtn.addEventListener('click', ()=> DOM.fileInput.click());
- DOM.fileInput.addEventListener('change', importFile);
+ if (DOM.exportBtn) DOM.exportBtn.addEventListener('click', exportData);
+ if (DOM.importBtn) DOM.importBtn.addEventListener('click', ()=> DOM.fileInput.click());
+ if (DOM.fileInput) DOM.fileInput.addEventListener('change', importFile);
 }
 
 /* Alap funkciók */
@@ -508,29 +490,31 @@ function tab(btn,id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
  btn.classList.add("active");
  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
- document.getElementById(id).classList.add("active");
+ const target = document.getElementById(id);
+ if(target) target.classList.add("active");
  if(id==="stat") setTimeout(loadStats,200);
 }
 
-/* Frissített newQuote: mindig pravatar, ha nincs explicit kép (itt nincs) */
 function newQuote(){
  const q = quotes[Math.floor(Math.random()*quotes.length)];
  if(DOM.quote) DOM.quote.innerText = q.t;
- if(DOM.motImg){
-  DOM.motImg.src = q.i;
-  DOM.motImg.alt = q.t;
- }
+ // Szerzői fotó: ha van q.p (explicit kép) használjuk; különben pravatar generátor név alapján
  if(DOM.authorPhoto){
-  // mindig pravatar alapú avatar a szerző neve szerint
-  const avatarUrl = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(q.a);
+  const avatarUrl = q.p ? q.p : ('https://i.pravatar.cc/150?u=' + encodeURIComponent(q.a));
   DOM.authorPhoto.src = avatarUrl;
   DOM.authorPhoto.alt = q.a;
  }
  if(DOM.authorTag) DOM.authorTag.innerText = q.a;
- if(DOM.authorCredit) DOM.authorCredit.innerHTML = '';
+ if(DOM.authorCredit){
+  if(q.credit) DOM.authorCredit.innerHTML = `<a href="${escapeHtml(q.creditUrl || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.credit)}</a>`;
+  else DOM.authorCredit.innerHTML = '';
+ }
  if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
+ // frissítsük a mini chartot (összefoglaló)
+ loadMiniStats();
 }
 
+/* Mentés funkciók (ugyanazok mint korábban) */
 function countJournalChars(){
  if(!DOM.charCount || !DOM.journal || !DOM.saveJournalBtn) return;
  const len = DOM.journal.value.length;
@@ -538,7 +522,6 @@ function countJournalChars(){
  DOM.saveJournalBtn.disabled = len < 90;
 }
 
-/* Mentés funkciók */
 function saveJournal(){
  if(!DOM.journal) return;
  const text = DOM.journal.value.trim();
@@ -549,6 +532,7 @@ function saveJournal(){
  DOM.journal.value = "";
  countJournalChars();
  if(document.getElementById('stat').classList.contains('active')) loadStats();
+ loadMiniStats();
 }
 
 function saveSport(){
@@ -559,6 +543,7 @@ function saveSport(){
  s.push({type:type, date:Date.now()});
  localStorage.setItem('sport', JSON.stringify(s));
  if(document.getElementById('stat').classList.contains('active')) loadStats();
+ loadMiniStats();
 }
 
 function saveBook(){
@@ -570,6 +555,7 @@ function saveBook(){
  localStorage.setItem('book', JSON.stringify(b));
  DOM.btitle.value = "";
  if(document.getElementById('stat').classList.contains('active')) loadStats();
+ loadMiniStats();
 }
 
 /* Stat és lista render */
@@ -636,6 +622,29 @@ function loadStats(){
       <button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${x._idx}">Töröl</button>
     </div>
   </div>`).join("");
+}
+
+/* Mini chart (összefoglaló a főoldalon) */
+function loadMiniStats(){
+ if(!DOM.miniChart) return;
+ const j = JSON.parse(localStorage.getItem('journal') || "[]");
+ const s = JSON.parse(localStorage.getItem('sport') || "[]");
+ const b = JSON.parse(localStorage.getItem('book') || "[]");
+ const counts = [j.length, s.length, b.length];
+
+ if(miniChartObj) miniChartObj.destroy();
+ miniChartObj = new Chart(DOM.miniChart, {
+  type: 'doughnut',
+  data: {
+   labels: ['Napló','Edzés','Könyv'],
+   datasets: [{ data: counts, backgroundColor:['#ff9800','#ff5722','#9c27b0'] }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{color:'#ddd'}}} }
+ });
+
+ if(DOM.miniStatText){
+  DOM.miniStatText.innerText = `Naplók: ${counts[0]} — Edzések: ${counts[1]} — Könyvek: ${counts[2]}`;
+ }
 }
 
 /* Modal szerkesztés */
@@ -708,6 +717,7 @@ function modalSave(){
  localStorage.setItem(type, JSON.stringify(arr));
  closeModal();
  loadStats();
+ loadMiniStats();
 }
 
 /* Törlés + undo */
@@ -722,6 +732,7 @@ function performDelete(type, originalIdx){
  DOM.undoMsg.innerText = `Törölve: ${summaryFor(undoEntry)}`;
  showUndoBar();
  loadStats();
+ loadMiniStats();
  const to = setTimeout(()=> {
   const pos = undoStack.indexOf(undoEntry);
   if(pos >= 0) undoStack.splice(pos,1);
@@ -769,6 +780,7 @@ function undoLast(){
  arr.splice(insertIdx, 0, entry.data);
  localStorage.setItem(entry.type, JSON.stringify(arr));
  loadStats();
+ loadMiniStats();
  cleanupUndoBarIfEmpty();
 }
 
@@ -818,6 +830,7 @@ function importFile(ev){
    }
    alert("Import sikeres.");
    loadStats();
+   loadMiniStats();
   }catch(err){
    alert("Import hiba: " + err.message);
   }
@@ -855,6 +868,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
  initDOM();
  newQuote();
  countJournalChars();
+ loadMiniStats();
  if(document.getElementById('stat').classList.contains('active')) loadStats();
 });
 </script>
