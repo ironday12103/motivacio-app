@@ -111,13 +111,32 @@ body{
 
 .big-quote{font-size:24px;font-weight:bold;line-height:1.2;}
 
-/* Mini stat card on main page */
+/* Diagram konténer — FIX helyzet és magasság, így nem okoz elmozdulást */
 .mini-stat-card{
  background:#1d1d1d;
  border-radius:16px;
  padding:10px;
  margin-top:12px;
+ height:200px;          /* fix magasság a kártyának */
+ box-sizing:border-box;
 }
+
+/* biztosítsuk, hogy a canvas TÉNYLEG fix magasságot használjon */
+.mini-stat-card canvas{
+ width:100% !important;
+ height:140px !important;
+ display:block;
+}
+
+/* Menu inner controls */
+.menu-controls{display:flex;gap:8px;margin-bottom:8px;}
+.menu-controls button{flex:1;padding:10px;border-radius:10px;border:none;background:#333;color:#fff;cursor:pointer}
+.menu-controls button.active{background:#ff9800;color:#000}
+
+/* Account view */
+.account-card{background:#1d1d1d;padding:12px;border-radius:12px;}
+.account-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.account-row b{font-size:14px}
 
 /* shared controls */
 textarea,input,select{
@@ -221,11 +240,6 @@ button{
   <div class="big-quote" id="quote"></div>
  </div>
 
- <div class="mini-stat-card">
-  <canvas id="miniChart" height="140"></canvas>
-  <div style="margin-top:8px;font-size:13px;color:#ddd" id="miniStatText"></div>
- </div>
-
  <button id="newQuoteBtn" class="main">Új motiváció</button>
 </div>
 
@@ -280,20 +294,43 @@ button{
  </div>
 </div>
 
+<!-- MENU: Diagram és Fiók -->
 <div id="menu" class="view">
- <div class="card">
-  <b>Menü (helyfoglaló)</b>
-  <p style="color:#ddd">Itt lesznek majd további beállítások és menüpontok.</p>
+ <div class="menu-controls">
+  <button id="diagramBtn" class="active">Diagram</button>
+  <button id="accountBtn">Fiók</button>
  </div>
-</div>
+
+ <!-- diagram container (ide került át a miniChart) -->
+ <div id="diagramView">
+  <div class="mini-stat-card">
+   <canvas id="miniChart" height="140"></canvas>
+   <div style="margin-top:8px;font-size:13px;color:#ddd" id="miniStatText"></div>
+  </div>
+ </div>
+
+ <!-- account container -->
+ <div id="accountView" style="display:none; margin-top:12px;">
+  <div class="account-card">
+   <div class="account-row"><b>Név</b><div id="accName">—</div></div>
+   <div class="account-row" style="margin-top:8px;"><b>E-mail</b><div id="accEmail">—</div></div>
+   <div style="margin-top:10px;display:flex;gap:8px;">
+    <button id="editAccountBtn" class="secondary">Szerkeszt</button>
+    <button id="clearAccountBtn" class="small-btn small-danger" style="width:auto">Töröl</button>
+   </div>
+  </div>
+ </div>
 
 </div>
 
-<!-- Modal -->
+</div>
+
+<!-- Modal (újrahasznosítható) -->
 <div id="modalBackdrop" class="modal-backdrop" style="display:none">
  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <header id="modalTitle">Szerkesztés</header>
   <div id="modalBody">
+   <!-- Dinamikus tartalom -->
    <div class="row" id="modalFieldJournal" style="display:none">
     <label for="modalJournal">Napló</label>
     <textarea id="modalJournal" rows="6"></textarea>
@@ -326,9 +363,7 @@ button{
 </div>
 
 <script>
-/* Teljes, frissített logika: egy kép a főoldalon (authorPhoto) — nincs több motImg/bannerváltozat. */
-/* Megőrizve: modal szerkesztés, undo, export/import, stat, miniChart. */
-
+/* Teljes alkalmazás logika — a fontos részek itt a miniChart opciók, és a diagram nézet viselkedése */
 const quotes = [
  {a:"David Goggins", t:"A fájdalom ideiglenes.", p:""},
  {a:"Elon Musk", t:"Ha fontos, megcsinálod.", p:""},
@@ -382,6 +417,16 @@ function initDOM(){
  DOM.miniChart = document.getElementById('miniChart');
  DOM.miniStatText = document.getElementById('miniStatText');
 
+ DOM.diagramBtn = document.getElementById('diagramBtn');
+ DOM.accountBtn = document.getElementById('accountBtn');
+ DOM.diagramView = document.getElementById('diagramView');
+ DOM.accountView = document.getElementById('accountView');
+
+ DOM.accName = document.getElementById('accName');
+ DOM.accEmail = document.getElementById('accEmail');
+ DOM.editAccountBtn = document.getElementById('editAccountBtn');
+ DOM.clearAccountBtn = document.getElementById('clearAccountBtn');
+
  // Modal elems
  DOM.modalBackdrop = document.getElementById('modalBackdrop');
  DOM.modalJournal = document.getElementById('modalJournal');
@@ -420,6 +465,10 @@ function initDOM(){
 
  // New quote
  document.getElementById('newQuoteBtn').addEventListener('click', newQuote);
+
+ // Menu buttons (Diagram / Account)
+ if(DOM.diagramBtn) DOM.diagramBtn.addEventListener('click', ()=> { DOM.diagramBtn.classList.add('active'); DOM.accountBtn.classList.remove('active'); DOM.diagramView.style.display='block'; DOM.accountView.style.display='none'; loadMiniStats(); });
+ if(DOM.accountBtn) DOM.accountBtn.addEventListener('click', ()=> { DOM.accountBtn.classList.add('active'); DOM.diagramBtn.classList.remove('active'); DOM.diagramView.style.display='none'; DOM.accountView.style.display='block'; loadAccountInfo(); });
 
  // Save buttons
  if (DOM.saveJournalBtn) DOM.saveJournalBtn.addEventListener('click', saveJournal);
@@ -473,33 +522,32 @@ function initDOM(){
  if (DOM.exportBtn) DOM.exportBtn.addEventListener('click', exportData);
  if (DOM.importBtn) DOM.importBtn.addEventListener('click', ()=> DOM.fileInput.click());
  if (DOM.fileInput) DOM.fileInput.addEventListener('change', importFile);
+
+ // account edit / clear
+ if (DOM.editAccountBtn) DOM.editAccountBtn.addEventListener('click', openAccountEditor);
+ if (DOM.clearAccountBtn) DOM.clearAccountBtn.addEventListener('click', clearAccount);
 }
 
 function newQuote(){
  const q = quotes[Math.floor(Math.random()*quotes.length)];
  if(DOM.quote) DOM.quote.innerText = q.t;
- // ha van explicit kép (q.p) használjuk, különben név alapú pravatar
  const avatar = q.p ? q.p : ('https://i.pravatar.cc/150?u=' + encodeURIComponent(q.a));
  if(DOM.authorPhoto){
   DOM.authorPhoto.src = avatar;
   DOM.authorPhoto.alt = q.a;
-  // ha van creditUrl, tároljuk datasetben és jelenítsük meg a credit szöveget
-  if(q.creditUrl) DOM.authorPhoto.dataset.sourceUrl = q.creditUrl;
-  else DOM.authorPhoto.dataset.sourceUrl = '';
+  if(q.creditUrl) DOM.authorPhoto.dataset.sourceUrl = q.creditUrl; else DOM.authorPhoto.dataset.sourceUrl = '';
  }
  if(DOM.authorTag) DOM.authorTag.innerText = q.a;
  if(DOM.authorCredit){
-  if(q.credit){
-   DOM.authorCredit.innerHTML = `<a href="${escapeHtml(q.creditUrl||'#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.credit)}</a>`;
-  } else {
-   DOM.authorCredit.innerHTML = '';
-  }
+  if(q.credit) DOM.authorCredit.innerHTML = `<a href="${escapeHtml(q.creditUrl||'#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.credit)}</a>`;
+  else DOM.authorCredit.innerHTML = '';
  }
  if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
+ // ne scrollozzunk — csak frissítjük a diagramot
  loadMiniStats();
 }
 
-/* Mentés funkciók (ugyanazok) */
+/* Mentés funkciók */
 function countJournalChars(){
  if(!DOM.charCount || !DOM.journal || !DOM.saveJournalBtn) return;
  const len = DOM.journal.value.length;
@@ -605,7 +653,7 @@ function loadStats(){
   </div>`).join("");
 }
 
-/* Mini chart */
+/* Mini chart — FIX viselkedés: FIX konténer és NINCS animáció, így nem mozgatja a layoutot */
 function loadMiniStats(){
  if(!DOM.miniChart) return;
  const j = JSON.parse(localStorage.getItem('journal') || "[]");
@@ -617,13 +665,39 @@ function loadMiniStats(){
  miniChartObj = new Chart(DOM.miniChart, {
   type:'doughnut',
   data:{labels:['Napló','Edzés','Könyv'],datasets:[{data:counts,backgroundColor:['#ff9800','#ff5722','#9c27b0']}]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#ddd'}}}}
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   animation: false,                // kikapcsoljuk az animációt, így nem okoz elmozdulást
+   plugins:{legend:{position:'bottom', labels:{color:'#ddd'}}}
+  }
  });
 
  if(DOM.miniStatText) DOM.miniStatText.innerText = `Naplók: ${counts[0]} — Edzések: ${counts[1]} — Könyvek: ${counts[2]}`;
 }
 
-/* Modal szerkesztés, undo, export/import — változatlan logika (röviden ugyanaz, lásd korábbi verziók) */
+/* Account: egyszerű localStorage alapú fiók */
+function loadAccountInfo(){
+ const acc = JSON.parse(localStorage.getItem('account') || "{}");
+ DOM.accName.innerText = acc.name || '—';
+ DOM.accEmail.innerText = acc.email || '—';
+}
+function openAccountEditor(){
+ const acc = JSON.parse(localStorage.getItem('account') || "{}");
+ const name = prompt("Név:", acc.name || "");
+ if(name === null) return;
+ const email = prompt("E-mail:", acc.email || "");
+ if(email === null) return;
+ localStorage.setItem('account', JSON.stringify({name:name.trim(), email:email.trim()}));
+ loadAccountInfo();
+}
+function clearAccount(){
+ if(!confirm("Biztosan törlöd a fiókadatokat?")) return;
+ localStorage.removeItem('account');
+ loadAccountInfo();
+}
+
+/* Modal szerkesztés, undo, export/import — mint korábban */
 function openEditModal(type, originalIdx){
  currentEdit={type,idx:originalIdx};
  DOM.modalFieldJournal.style.display='none';
