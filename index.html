@@ -26,9 +26,29 @@ body{margin:0;background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;
 #authorCredit a{color:#ffd89b;text-decoration:underline}
 .big-quote{font-size:24px;font-weight:bold;line-height:1.2}
 
-/* Diagram (a Menüben): fix méretezés, nem okoz layout-változást */
-.diagram-card{background:#1d1d1d;border-radius:16px;padding:10px;margin-top:12px;height:260px;box-sizing:border-box;overflow:hidden}
-.diagram-card canvas{width:100% !important;height:200px !important;display:block}
+/* Goals */
+.goals-panel{margin-top:12px;display:block}
+.goals-tabs{display:flex;gap:8px;margin-bottom:8px}
+.goals-tabs button{flex:1;padding:8px;border-radius:10px;border:none;background:#333;color:#fff;cursor:pointer}
+.goals-tabs button.active{background:#ff9800;color:#000}
+.goal-inputs{display:flex;gap:8px;margin-bottom:8px}
+.goal-inputs input{flex:1;padding:8px;border-radius:10px;border:none}
+.goal-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.goal-item{background:#1c1c1c;padding:8px;border-radius:12px;display:flex;gap:8px;align-items:center}
+.goal-item .text{flex:1}
+.goal-actions{display:flex;gap:6px}
+.small-icon{background:#333;border-radius:8px;padding:6px;color:#fff;border:none;cursor:pointer}
+
+/* Diagram (popover) */
+.diagram-popover-backdrop{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:5000;display:none}
+.diagram-popover{background:#111;border-radius:12px;padding:12px;width:94%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,0.7)}
+.popover-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.popover-tabs{display:flex;gap:6px;margin-top:8px}
+.popover-tabs button{padding:8px;border-radius:8px;border:none;background:#333;color:#fff;cursor:pointer}
+.popover-tabs button.active{background:#ff9800;color:#000}
+.popover-body{margin-top:8px}
+.popover-chart{height:220px}
+.fav-list{max-height:260px;overflow:auto;margin-top:8px}
 
 /* Menu controls */
 .menu-controls{display:flex;gap:8px;margin-bottom:8px}
@@ -42,6 +62,7 @@ body{margin:0;background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;
 
 /* Shared */
 textarea,input,select{width:100%;padding:12px;border-radius:14px;border:none;margin-top:8px;box-sizing:border-box}
+input[type=range]{width:100%;margin-top:8px}
 button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cursor:pointer}
 .main{background:#ff9800;color:#000}
 .secondary{background:#333;color:#fff}
@@ -64,6 +85,10 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 .io-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .io-actions button{flex:1;padding:10px;border-radius:10px}
 .file-input{display:none}
+
+/* three-dot button */
+.more-btn{position:fixed;right:22px;top:22px;width:44px;height:44px;border-radius:50%;background:#222;color:#fff;border:2px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;z-index:4000;cursor:pointer}
+.more-btn:hover{background:#2a2a2a}
 </style>
 </head>
 <body>
@@ -80,7 +105,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 
   <div class="header-quote" id="dailyQuote"></div>
 
-  <!-- FŐOLDAL: csak egy kép (szerző portré) és idézet -->
+  <!-- FŐOLDAL: csak egy kép (szerző portré) és idézet + célok -->
   <div id="mot" class="view active">
     <div class="motivation-card">
       <img id="authorPhoto" class="author-photo" alt="Szerző képe" title="Kattints a forrás megnyitásához, ha elérhető">
@@ -89,6 +114,26 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
       <div class="big-quote" id="quote"></div>
     </div>
     <button id="newQuoteBtn" class="main">Új motiváció</button>
+
+    <!-- Goals: közeli / távoli -->
+    <div class="goals-panel card" id="goalsPanel">
+      <div style="font-weight:bold;margin-bottom:8px">Célok</div>
+      <div class="goals-tabs">
+        <button id="nearTab" class="active">Közeli célok</button>
+        <button id="farTab">Távoli célok</button>
+      </div>
+      <div class="goal-inputs">
+        <input id="goalText" placeholder="Új cél megadása..." />
+        <select id="goalPriority">
+          <option value="normal">Normál</option>
+          <option value="high">Fontos</option>
+        </select>
+        <button id="addGoalBtn" class="small-icon">+</button>
+      </div>
+      <div style="font-size:12px;opacity:.85">Mindkét kategória szerkeszthető, törölhető és pipálható.</div>
+      <div class="goal-list" id="goalList"></div>
+    </div>
+
   </div>
 
   <!-- NAPLÓ -->
@@ -100,13 +145,26 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 
   <!-- SPORT -->
   <div id="sport" class="view">
-    <select id="stype"><option>Futás</option><option>Súlyzós</option></select>
+    <label>Edzés típusa</label>
+    <select id="stype">
+      <option>Futás</option>
+      <option>Súlyzós</option>
+      <option>Kerékpár</option>
+      <option>Úszás</option>
+      <option>Jóga</option>
+      <option>Egyéb</option>
+    </select>
+    <label>Időtartam (perc): <span id="sportDurationLabel">30</span> min</label>
+    <input id="sportDuration" type="range" min="5" max="240" value="30">
     <button class="secondary" id="saveSportBtn">Mentés</button>
   </div>
 
   <!-- KÖNYV -->
   <div id="book" class="view">
     <input id="btitle" placeholder="Könyv címe">
+    <label>Oldalszám ma: <span id="bookPagesLabel">20</span> oldal</label>
+    <input id="bpages" type="range" min="0" max="2000" value="20">
+    <label>Olvasás ideje ma (perc): <input id="bminutes" type="number" min="0" max="1440" value="0" style="width:110px;display:inline-block;margin-left:8px"></label>
     <button class="secondary" id="saveBookBtn">Mentés</button>
   </div>
 
@@ -137,21 +195,13 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
     </div>
   </div>
 
-  <!-- MENÜ: Diagram és Fiók -->
+  <!-- MENÜ: Fiók (diagram eltávolítva innen; a diagram a jobb felső "..." menüben található) -->
   <div id="menu" class="view">
     <div class="menu-controls">
-      <button id="diagramBtn" class="active">Diagram</button>
-      <button id="accountBtn">Fiók</button>
+      <button id="accountBtn" class="active">Fiók</button>
     </div>
 
-    <div id="diagramView">
-      <div class="diagram-card">
-        <canvas id="diagramChart" height="200"></canvas>
-        <div style="margin-top:8px;font-size:13px;color:#ddd" id="diagramStatText"></div>
-      </div>
-    </div>
-
-    <div id="accountView" style="display:none; margin-top:12px;">
+    <div id="accountView" style="display:block; margin-top:12px;">
       <div class="account-card">
         <div class="account-row"><b>Név</b><div id="accName">—</div></div>
         <div class="account-row" style="margin-top:8px;"><b>E-mail</b><div id="accEmail">—</div></div>
@@ -179,15 +229,67 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
       <div class="row" id="modalFieldSport" style="display:none">
         <label for="modalSportType">Edzés típus</label>
         <input id="modalSportType" />
+        <label>Időtartam (perc): <span id="modalSportDurationLabel">30</span></label>
+        <input id="modalSportDuration" type="range" min="5" max="240" value="30">
       </div>
       <div class="row" id="modalFieldBook" style="display:none">
         <label for="modalBookTitle">Könyv címe</label>
         <input id="modalBookTitle" />
+        <label>Oldalszám: <span id="modalBookPagesLabel">20</span></label>
+        <input id="modalBookPages" type="range" min="0" max="2000" value="20">
+        <label>Olvasás (perc): <input id="modalBookMinutes" type="number" min="0" max="1440" value="0" style="width:110px;display:inline-block;margin-left:8px"></label>
+      </div>
+      <div class="row" id="modalFieldGoal" style="display:none">
+        <label for="modalGoalText">Cél</label>
+        <input id="modalGoalText" />
+        <label for="modalGoalCategory">Kategória</label>
+        <select id="modalGoalCategory"><option value="near">Közeli</option><option value="far">Távoli</option></select>
+        <label><input id="modalGoalDone" type="checkbox"> Kész</label>
       </div>
     </div>
     <div class="actions">
       <button id="modalSaveBtn" class="main">Mentés</button>
       <button id="modalCancelBtn" class="secondary">Mégse</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diagram / Favorites popover (opened by three-dot button) -->
+<div id="diagramPopoverBackdrop" class="diagram-popover-backdrop">
+  <div class="diagram-popover">
+    <div class="popover-header">
+      <strong id="popoverTitle">Diagramok</strong>
+      <button id="closePopover" class="small-icon">✕</button>
+    </div>
+
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <div style="flex:1">
+        <div class="popover-tabs">
+          <button id="popDiagramBtn" class="active">Teljesítmény</button>
+          <button id="popFavBtn">Kedvencek</button>
+        </div>
+      </div>
+      <div style="width:180px;display:flex;gap:6px;">
+        <button id="popMonthBtn" class="popover-mode active">Havi</button>
+        <button id="popYearBtn" class="popover-mode">Évi</button>
+      </div>
+    </div>
+
+    <div class="popover-body">
+      <div id="popoverDiagramArea">
+        <div class="popover-chart">
+          <canvas id="popoverDiagramChart"></canvas>
+        </div>
+        <div id="popoverDiagramText" style="margin-top:8px;color:#ddd;font-size:13px"></div>
+      </div>
+
+      <div id="popoverFavArea" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button id="favAddQuote" class="secondary" style="flex:1">Aktuális idézet mentése</button>
+          <button id="favClearAll" class="small-danger" style="width:120px">Összes törlése</button>
+        </div>
+        <div class="fav-list card" id="favList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -199,17 +301,21 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
   <button id="undoDismiss" class="secondary">Bezár</button>
 </div>
 
+<!-- three-dot more button -->
+<button class="more-btn" id="moreBtn" title="További menü">⋯</button>
+
 <script>
 /*
-  Változtatások összefoglaló:
-  - A főoldalról TÖRLŐDÖTT a diagram (nincs több miniChart ott).
-  - A diagram kizárólag a Menü -> Diagram nézetben található (canvas id="diagramChart").
-  - A diagramot csak egyszer hozzuk létre, amikor először megnyitod a Diagram nézetet.
-  - A diagram fixed konténerben van (CSS height), Chart.js responsive:false és animation:false — így NEM okoz görgetést vagy elmozdulást.
-  - A diagramra kattintás/fókusz nem okoz automatikus scroll-t.
+  Bővítések:
+  1) Főoldalon (mot) Célok panel: Közeli / Távoli kategóriák, szerkesztés, törlés, pipálás (kész).
+  2) A diagram kikerült a Menuból: a jobb felső három pont menüben van egy popover, ott a diagram és a Kedvencek.
+     A diagramnál havi és évi nézet választható (havi: utolsó 12 hónap; évi: utolsó 5 év).
+  3) Könyv: visszahozva oldal-sáv (slider) és napi olvasási percek (számmező).
+  4) Edzés: visszahozott csúszka az időtartamra, több kategória.
+  5) Kedvencek: a popoverban listázhatók, menthetők és törölhetők kedvenc idézetek/edzések/könyvek.
+  Fontos: az alap működés maradt és a meglévő adatok továbbra is localStorage-ban tárolódnak.
 */
 
-/* Alapadatok */
 const quotes = [
  {a:"David Goggins", t:"A fájdalom ideiglenes.", p:""},
  {a:"Elon Musk", t:"Ha fontos, megcsinálod.", p:""},
@@ -225,12 +331,14 @@ const quotes = [
 
 let statMode = "week";
 let statChartObj = null;
-let diagramChartObj = null; // a Menü diagramja
+let diagramChartObj = null; // korábbi diagram
+let popDiagramObj = null; // popover diagram
 const DOM = {};
 let undoStack = [];
 let undoTimeouts = [];
 let currentEdit = null;
 
+// --- INIT DOM ---
 function initDOM(){
   DOM.authorPhoto = document.getElementById('authorPhoto');
   DOM.authorTag = document.getElementById('authorTag');
@@ -244,9 +352,14 @@ function initDOM(){
 
   DOM.stype = document.getElementById('stype');
   DOM.saveSportBtn = document.getElementById('saveSportBtn');
+  DOM.sportDuration = document.getElementById('sportDuration');
+  DOM.sportDurationLabel = document.getElementById('sportDurationLabel');
 
   DOM.btitle = document.getElementById('btitle');
   DOM.saveBookBtn = document.getElementById('saveBookBtn');
+  DOM.bpages = document.getElementById('bpages');
+  DOM.bookPagesLabel = document.getElementById('bookPagesLabel');
+  DOM.bminutes = document.getElementById('bminutes');
 
   DOM.weekBtn = document.getElementById('weekBtn');
   DOM.yearBtn = document.getElementById('yearBtn');
@@ -266,9 +379,6 @@ function initDOM(){
   DOM.diagramView = document.getElementById('diagramView');
   DOM.accountView = document.getElementById('accountView');
 
-  DOM.diagramChart = document.getElementById('diagramChart');
-  DOM.diagramStatText = document.getElementById('diagramStatText');
-
   DOM.accName = document.getElementById('accName');
   DOM.accEmail = document.getElementById('accEmail');
   DOM.editAccountBtn = document.getElementById('editAccountBtn');
@@ -280,8 +390,18 @@ function initDOM(){
   DOM.modalFieldJournal = document.getElementById('modalFieldJournal');
   DOM.modalFieldSport = document.getElementById('modalFieldSport');
   DOM.modalSportType = document.getElementById('modalSportType');
+  DOM.modalSportDuration = document.getElementById('modalSportDuration');
+  DOM.modalSportDurationLabel = document.getElementById('modalSportDurationLabel');
   DOM.modalFieldBook = document.getElementById('modalFieldBook');
   DOM.modalBookTitle = document.getElementById('modalBookTitle');
+  DOM.modalBookPages = document.getElementById('modalBookPages');
+  DOM.modalBookPagesLabel = document.getElementById('modalBookPagesLabel');
+  DOM.modalBookMinutes = document.getElementById('modalBookMinutes');
+  DOM.modalFieldGoal = document.getElementById('modalFieldGoal');
+  DOM.modalGoalText = document.getElementById('modalGoalText');
+  DOM.modalGoalCategory = document.getElementById('modalGoalCategory');
+  DOM.modalGoalDone = document.getElementById('modalGoalDone');
+
   DOM.modalSaveBtn = document.getElementById('modalSaveBtn');
   DOM.modalCancelBtn = document.getElementById('modalCancelBtn');
 
@@ -294,36 +414,48 @@ function initDOM(){
   DOM.importBtn = document.getElementById('importBtn');
   DOM.fileInput = document.getElementById('fileInput');
 
+  DOM.moreBtn = document.getElementById('moreBtn');
+  DOM.diagramPopoverBackdrop = document.getElementById('diagramPopoverBackdrop');
+  DOM.popDiagramChart = document.getElementById('popoverDiagramChart');
+  DOM.popDiagramText = document.getElementById('popoverDiagramText');
+  DOM.popDiagramArea = document.getElementById('popoverDiagramArea');
+  DOM.popFavArea = document.getElementById('popoverFavArea');
+  DOM.popFavList = document.getElementById('favList');
+  DOM.popDiagramBtn = document.getElementById('popDiagramBtn');
+  DOM.popFavBtn = document.getElementById('popFavBtn');
+  DOM.popMonthBtn = document.getElementById('popMonthBtn');
+  DOM.popYearBtn = document.getElementById('popYearBtn');
+  DOM.favAddQuote = document.getElementById('favAddQuote');
+  DOM.favClearAll = document.getElementById('favClearAll');
+
+  DOM.goalsPanel = document.getElementById('goalsPanel');
+  DOM.nearTab = document.getElementById('nearTab');
+  DOM.farTab = document.getElementById('farTab');
+  DOM.goalText = document.getElementById('goalText');
+  DOM.goalPriority = document.getElementById('goalPriority');
+  DOM.addGoalBtn = document.getElementById('addGoalBtn');
+  DOM.goalList = document.getElementById('goalList');
+
   document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> {
       document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const id = btn.dataset.target;
-      // ne fókuszáljunk semmire, ne okozzunk automatikus görgetést
       const scrollTop = document.scrollingElement ? document.scrollingElement.scrollTop : window.pageYOffset;
       document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
       const tgt = document.getElementById(id);
       if(tgt) tgt.classList.add('active');
-      // visszaállítjuk a scroll pozíciót (biztosítva, hogy semmi se görgesse le)
       setTimeout(()=> {
         if(document.scrollingElement) document.scrollingElement.scrollTop = scrollTop;
         else window.scrollTo(0, scrollTop);
       }, 0);
       if(id === 'stat') setTimeout(loadStats,200);
-      if(id === 'menu'){
-        // ha Diagram nézet aktív (alapból diagram gomb aktív), hozzuk létre a diagramot egyszer és töltsük be
-        // (nem hívunk fókuszt vagy scroll-t)
-        if(document.getElementById('diagramView').style.display !== 'block'){
-          // nothing
-        }
-      }
     });
   });
 
   document.getElementById('newQuoteBtn').addEventListener('click', newQuote);
 
-  if(DOM.diagramBtn) DOM.diagramBtn.addEventListener('click', ()=> { DOM.diagramBtn.classList.add('active'); DOM.accountBtn.classList.remove('active'); DOM.diagramView.style.display='block'; DOM.accountView.style.display='none'; ensureDiagramCreatedAndUpdated(); });
-  if(DOM.accountBtn) DOM.accountBtn.addEventListener('click', ()=> { DOM.accountBtn.classList.add('active'); DOM.diagramBtn.classList.remove('active'); DOM.diagramView.style.display='none'; DOM.accountView.style.display='block'; loadAccountInfo(); });
+  if(DOM.accountBtn) DOM.accountBtn.addEventListener('click', ()=> { DOM.accountBtn.classList.add('active'); DOM.accountView.style.display='block'; loadAccountInfo(); });
 
   if (DOM.saveJournalBtn) DOM.saveJournalBtn.addEventListener('click', saveJournal);
   if (DOM.saveSportBtn) DOM.saveSportBtn.addEventListener('click', saveSport);
@@ -345,7 +477,7 @@ function initDOM(){
     });
   }
 
-  [document.getElementById('statJournalList'), document.getElementById('statSportList'), document.getElementById('statBookList')].forEach(listEl=>{
+  [DOM.statJournalList, DOM.statSportList, DOM.statBookList].forEach(listEl=>{
     if(!listEl) return;
     listEl.addEventListener('click', ev=>{
       const btn = ev.target.closest('button[data-action]');
@@ -355,12 +487,15 @@ function initDOM(){
       const idx = parseInt(btn.dataset.idx,10);
       if(action === 'edit') openEditModal(type, idx);
       if(action === 'delete') performDelete(type, idx);
+      if(action === 'fav') toggleFavoriteFromList(type, idx);
     });
   });
 
   if (DOM.modalSaveBtn) DOM.modalSaveBtn.addEventListener('click', modalSave);
   if (DOM.modalCancelBtn) DOM.modalCancelBtn.addEventListener('click', closeModal);
   if (DOM.modalJournal) DOM.modalJournal.addEventListener('input', ()=> DOM.modalCharCount.innerText = DOM.modalJournal.value.length);
+  if (DOM.modalSportDuration) DOM.modalSportDuration.addEventListener('input', ()=> DOM.modalSportDurationLabel.innerText = DOM.modalSportDuration.value);
+  if (DOM.modalBookPages) DOM.modalBookPages.addEventListener('input', ()=> DOM.modalBookPagesLabel.innerText = DOM.modalBookPages.value);
 
   if (DOM.undoBtn) DOM.undoBtn.addEventListener('click', undoLast);
   if (DOM.undoDismiss) DOM.undoDismiss.addEventListener('click', hideUndoBar);
@@ -371,75 +506,188 @@ function initDOM(){
 
   if (DOM.editAccountBtn) DOM.editAccountBtn.addEventListener('click', openAccountEditor);
   if (DOM.clearAccountBtn) DOM.clearAccountBtn.addEventListener('click', clearAccount);
-}
 
-/* Diagram a Menüben: csak egyszer hozzuk létre (responsive:false, animation:false),
-   és csak az adatokat frissítjük updateDiagramChart()-dal, így nem lesz automatikus görgetés. */
-function createDiagramChart(){
-  if(!DOM.diagramChart) return;
-  const ctx = DOM.diagramChart.getContext('2d');
-  diagramChartObj = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Napló','Edzés','Könyv'],
-      datasets: [{
-        label: 'Bejegyzések',
-        data: [0,0,0],
-        backgroundColor: ['#ff9800','#ff5722','#9c27b0']
-      }]
-    },
-    options: {
-      responsive: false,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { color: '#ddd' } },
-        x: { ticks: { color: '#ddd' } }
-      }
-    }
+  if (DOM.sportDuration) { DOM.sportDuration.addEventListener('input', ()=> DOM.sportDurationLabel.innerText = DOM.sportDuration.value); }
+  if (DOM.bpages) { DOM.bpages.addEventListener('input', ()=> DOM.bookPagesLabel.innerText = DOM.bpages.value); }
+
+  // Popover / more button
+  if (DOM.moreBtn) DOM.moreBtn.addEventListener('click', ()=> { DOM.diagramPopoverBackdrop.style.display='flex'; ensurePopoverChart(); refreshFavoritesList(); });
+  document.getElementById('closePopover').addEventListener('click', ()=> DOM.diagramPopoverBackdrop.style.display='none');
+  if (DOM.popDiagramBtn) DOM.popDiagramBtn.addEventListener('click', ()=> { DOM.popDiagramBtn.classList.add('active'); DOM.popFavBtn.classList.remove('active'); DOM.popDiagramArea.style.display='block'; DOM.popFavArea.style.display='none'; ensurePopoverChart(); });
+  if (DOM.popFavBtn) DOM.popFavBtn.addEventListener('click', ()=> { DOM.popFavBtn.classList.add('active'); DOM.popDiagramBtn.classList.remove('active'); DOM.popDiagramArea.style.display='none'; DOM.popFavArea.style.display='block'; refreshFavoritesList(); });
+  if (DOM.popMonthBtn) DOM.popMonthBtn.addEventListener('click', ()=> { DOM.popMonthBtn.classList.add('active'); DOM.popYearBtn.classList.remove('active'); ensurePopoverChart('month'); });
+  if (DOM.popYearBtn) DOM.popYearBtn.addEventListener('click', ()=> { DOM.popYearBtn.classList.add('active'); DOM.popMonthBtn.classList.remove('active'); ensurePopoverChart('year'); });
+  if (DOM.favAddQuote) DOM.favAddQuote.addEventListener('click', addCurrentQuoteToFavorites);
+  if (DOM.favClearAll) DOM.favClearAll.addEventListener('click', ()=> { if(confirm("Biztosan törlöd az összes kedvencet?")){ localStorage.removeItem('favorites'); refreshFavoritesList(); alert('Törölve.'); } });
+
+  // Goals
+  if (DOM.nearTab) DOM.nearTab.addEventListener('click', ()=> switchGoalTab('near'));
+  if (DOM.farTab) DOM.farTab.addEventListener('click', ()=> switchGoalTab('far'));
+  if (DOM.addGoalBtn) DOM.addGoalBtn.addEventListener('click', addGoal);
+  DOM.goalList.addEventListener('click', ev=>{
+    const btn = ev.target.closest('button[data-action]');
+    if(!btn) return;
+    const action = btn.dataset.action;
+    const idx = parseInt(btn.dataset.idx,10);
+    if(action==='edit') openEditModal('goal', idx);
+    if(action==='delete') performDelete('goal', idx);
+    if(action==='toggle') toggleGoalDone(idx);
   });
 }
 
-function updateDiagramChart(counts){
-  if(!diagramChartObj) createDiagramChart();
-  if(!diagramChartObj) return;
-  diagramChartObj.data.datasets[0].data = counts;
-  diagramChartObj.update('none'); // frissítés animáció nélkül
+// --- GOALS ---
+let activeGoalTab = 'near';
+function switchGoalTab(k){ activeGoalTab=k; DOM.nearTab.classList.toggle('active',k==='near'); DOM.farTab.classList.toggle('active',k==='far'); renderGoals(); }
+function getGoals(){ return JSON.parse(localStorage.getItem('goals')||"[]"); }
+function saveGoals(g){ localStorage.setItem('goals', JSON.stringify(g)); }
+function addGoal(){
+  const text = (DOM.goalText.value||'').trim();
+  if(!text) return alert('Adj meg egy célt.');
+  const cat = (activeGoalTab==='near') ? 'near' : 'far';
+  const pr = DOM.goalPriority.value||'normal';
+  const g = getGoals();
+  g.push({text,category:cat,priority:pr,done:false,date:Date.now()});
+  saveGoals(g);
+  DOM.goalText.value='';
+  renderGoals();
+}
+function renderGoals(){
+  const g = getGoals().map((x,i)=>({...x,_idx:i}));
+  const filtered = g.filter(x=>x.category===activeGoalTab);
+  DOM.goalList.innerHTML = filtered.map(x=>`<div class="goal-item">
+    <button class="small-icon" data-action="toggle" data-idx="${x._idx}" title="Kész / nem kész">${x.done? '☑' : '▢'}</button>
+    <div class="text">${escapeHtml(x.text)}${x.priority==='high' ? ' <small style="color:#ffd89b">• fontosság</small>':''}</div>
+    <div class="goal-actions">
+      <button class="small-icon" data-action="edit" data-idx="${x._idx}">✎</button>
+      <button class="small-icon" data-action="delete" data-idx="${x._idx}">🗑</button>
+    </div>
+  </div>`).join('');
+}
+function toggleGoalDone(idx){
+  const g = getGoals();
+  if(idx<0||idx>=g.length) return;
+  g[idx].done = !g[idx].done;
+  saveGoals(g);
+  renderGoals();
 }
 
-function ensureDiagramCreatedAndUpdated(){
-  // Hozzuk létre egyszer és töltsük fel adatokkal. Ne görgessünk sehová.
-  if(!diagramChartObj) createDiagramChart();
-  const j = JSON.parse(localStorage.getItem('journal') || "[]");
-  const s = JSON.parse(localStorage.getItem('sport') || "[]");
-  const b = JSON.parse(localStorage.getItem('book') || "[]");
-  updateDiagramChart([j.length, s.length, b.length]);
-  if(DOM.diagramStatText) DOM.diagramStatText.innerText = `Naplók: ${j.length} — Edzések: ${s.length} — Könyvek: ${b.length}`;
-}
-
-/* Egyéb funkciók */
-function newQuote(){
-  const q = quotes[Math.floor(Math.random()*quotes.length)];
-  if(DOM.quote) DOM.quote.innerText = q.t;
-  const avatar = q.p ? q.p : ('https://i.pravatar.cc/150?u=' + encodeURIComponent(q.a));
-  if(DOM.authorPhoto){ DOM.authorPhoto.src = avatar; DOM.authorPhoto.alt = q.a; DOM.authorPhoto.dataset.sourceUrl = q.creditUrl || ''; }
-  if(DOM.authorTag) DOM.authorTag.innerText = q.a;
-  if(DOM.authorCredit){ if(q.credit) DOM.authorCredit.innerHTML = `<a href="${escapeHtml(q.creditUrl||'#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.credit)}</a>`; else DOM.authorCredit.innerHTML = ''; }
-  if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
-  // ne scrollozzunk; a diagram frissítése csak akkor történik, ha a Menü->Diagram nyitva van
-  const activeView = document.querySelector('.view.active');
-  if(activeView && activeView.id === 'menu' && DOM.diagramView && DOM.diagramView.style.display !== 'none') {
-    ensureDiagramCreatedAndUpdated();
+// --- POPOVER DIAGRAM (havi/évi aggregálás) ---
+function ensurePopoverChart(mode='month'){
+  // mode: 'month' (12 months) or 'year' (5 years)
+  const j = JSON.parse(localStorage.getItem('journal')||"[]");
+  const s = JSON.parse(localStorage.getItem('sport')||"[]");
+  const b = JSON.parse(localStorage.getItem('book')||"[]");
+  const now = new Date();
+  let labels=[], jdata=[], sdata=[], bdata=[];
+  if(mode==='month'){
+    // last 12 months, label 'Mon' translated short months
+    const months = [];
+    for(let i=11;i>=0;i--){
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      months.push({y:d.getFullYear(), m:d.getMonth()});
+    }
+    labels = months.map(x=>new Date(x.y, x.m,1).toLocaleString('hu-HU',{month:'short'}));
+    jdata = months.map(m => j.filter(z=>{ const d=new Date(z.date); return d.getFullYear()===m.y && d.getMonth()===m.m }).length);
+    sdata = months.map(m => s.filter(z=>{ const d=new Date(z.date); return d.getFullYear()===m.y && d.getMonth()===m.m }).length);
+    bdata = months.map(m => b.filter(z=>{ const d=new Date(z.date); return d.getFullYear()===m.y && d.getMonth()===m.m }).length);
+  } else {
+    // last 5 years
+    const years=[];
+    for(let i=4;i>=0;i--){
+      const y = now.getFullYear()-i;
+      years.push(y);
+    }
+    labels = years.map(y=>String(y));
+    jdata = years.map(y=> j.filter(z=> new Date(z.date).getFullYear()===y).length);
+    sdata = years.map(y=> s.filter(z=> new Date(z.date).getFullYear()===y).length);
+    bdata = years.map(y=> b.filter(z=> new Date(z.date).getFullYear()===y).length);
   }
+
+  if(popDiagramObj) popDiagramObj.destroy();
+  const ctx = DOM.popDiagramChart.getContext('2d');
+  popDiagramObj = new Chart(ctx, {
+    type:'bar',
+    data: { labels, datasets:[
+      { label:'Napló', data:jdata, backgroundColor:'#ff9800'},
+      { label:'Edzés', data:sdata, backgroundColor:'#ff5722'},
+      { label:'Könyv', data:bdata, backgroundColor:'#9c27b0'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,scales:{y:{beginAtZero:true}},plugins:{legend:{position:'bottom',labels:{color:'#ddd'}}}}
+  });
+
+  DOM.popDiagramText.innerText = `Naplók: ${j.length} — Edzések: ${s.length} — Könyvek: ${b.length}`;
 }
 
-/* Mentés, stat, modal, undo, import/export és account kezelések (összefoglalva) */
-function countJournalChars(){ if(!DOM.charCount||!DOM.journal||!DOM.saveJournalBtn) return; const len=DOM.journal.value.length; DOM.charCount.innerText=len; DOM.saveJournalBtn.disabled = len<90; }
-function saveJournal(){ if(!DOM.journal) return; const text=DOM.journal.value.trim(); if(text.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie.");return} let j=JSON.parse(localStorage.getItem('journal')||"[]"); j.push({text:text,date:Date.now()}); localStorage.setItem('journal',JSON.stringify(j)); DOM.journal.value=""; countJournalChars(); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensureDiagramCreatedAndUpdated(); }
-function saveSport(){ if(!DOM.stype) return; const type=DOM.stype.value?DOM.stype.value.trim():""; if(!type){alert("Adj meg egy edzés típust.");return} let s=JSON.parse(localStorage.getItem('sport')||"[]"); s.push({type:type,date:Date.now()}); localStorage.setItem('sport',JSON.stringify(s)); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensureDiagramCreatedAndUpdated(); }
-function saveBook(){ if(!DOM.btitle) return; const title=DOM.btitle.value?DOM.btitle.value.trim():""; if(!title){alert("Adj meg egy könyvcímet.");return} let b=JSON.parse(localStorage.getItem('book')||"[]"); b.push({title:title,date:Date.now()}); localStorage.setItem('book',JSON.stringify(b)); DOM.btitle.value=""; if(document.getElementById('stat').classList.contains('active')) loadStats(); ensureDiagramCreatedAndUpdated(); }
+// --- FAVORITES ---
+function getFavorites(){ return JSON.parse(localStorage.getItem('favorites')||"[]"); }
+function saveFavorites(arr){ localStorage.setItem('favorites', JSON.stringify(arr)); }
+function addCurrentQuoteToFavorites(){
+  const txt = DOM.quote ? DOM.quote.innerText : '';
+  const author = DOM.authorTag ? DOM.authorTag.innerText : '';
+  if(!txt) return alert('Nincs aktuális idézet.');
+  const fav = getFavorites();
+  fav.push({kind:'quote',date:Date.now(),payload:{text:txt,author}});
+  saveFavorites(fav);
+  refreshFavoritesList();
+  alert('Idézet elmentve a kedvencek közé.');
+}
+function refreshFavoritesList(){
+  const fav = getFavorites().map((x,i)=>({...x,_idx:i}));
+  DOM.popFavList.innerHTML = fav.length===0 ? '<div style="opacity:.8">Nincsenek mentett kedvencek.</div>' : fav.map(x=>{
+    if(x.kind==='quote') return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:8px;background:#111;margin-bottom:8px">
+      <div style="flex:1"><div style="font-weight:bold">${escapeHtml(x.payload.text)}</div><div style="font-size:12px;opacity:.8">${escapeHtml(x.payload.author||'')}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="small-icon" data-fav-action="delete" data-idx="${x._idx}">🗑</button>
+      </div>
+    </div>`;
+    if(x.kind==='sport') return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:8px;background:#111;margin-bottom:8px">
+      <div style="flex:1"><div style="font-weight:bold">${escapeHtml(x.payload.type)} — ${x.payload.duration} perc</div><div style="font-size:12px;opacity:.8">${formatDate(x.date)}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="small-icon" data-fav-action="delete" data-idx="${x._idx}">🗑</button>
+      </div>
+    </div>`;
+    if(x.kind==='book') return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:8px;background:#111;margin-bottom:8px">
+      <div style="flex:1"><div style="font-weight:bold">${escapeHtml(x.payload.title)} — ${x.payload.pages} oldal</div><div style="font-size:12px;opacity:.8">${formatDate(x.date)}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="small-icon" data-fav-action="delete" data-idx="${x._idx}">🗑</button>
+      </div>
+    </div>`;
+    return '';
+  }).join('');
 
+  DOM.popFavList.querySelectorAll('button[data-fav-action]').forEach(btn=>{
+    btn.addEventListener('click', ev=>{
+      const idx = parseInt(btn.dataset.idx,10);
+      const arr = getFavorites();
+      arr.splice(idx,1);
+      saveFavorites(arr);
+      refreshFavoritesList();
+    });
+  });
+}
+
+// allow favoriting from stat lists
+function toggleFavoriteFromList(type, idx){
+  if(typeof idx !== 'number' || isNaN(idx)) return;
+  const arr = JSON.parse(localStorage.getItem(type)||"[]");
+  const item = arr[idx];
+  if(!item) return;
+  const fav = getFavorites();
+  if(type==='sport') fav.push({kind:'sport',date:Date.now(),payload:{type:item.type,duration:item.duration || item.time || 0}});
+  if(type==='book') fav.push({kind:'book',date:Date.now(),payload:{title:item.title,pages:item.pages||item.pagesCount||0}});
+  if(type==='journal') fav.push({kind:'quote',date:Date.now(),payload:{text:item.text,author:''}});
+  saveFavorites(fav);
+  alert('Hozzáadva a kedvencekhez.');
+  refreshFavoritesList();
+}
+
+// --- CRUD alapok (kiterjesztve sport/book modal mezőkkel) ---
+function countJournalChars(){ if(!DOM.charCount||!DOM.journal||!DOM.saveJournalBtn) return; const len=DOM.journal.value.length; DOM.charCount.innerText=len; DOM.saveJournalBtn.disabled = len<90; }
+function saveJournal(){ if(!DOM.journal) return; const text=DOM.journal.value.trim(); if(text.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie.");return} let j=JSON.parse(localStorage.getItem('journal')||"[]"); j.push({text:text,date:Date.now()}); localStorage.setItem('journal',JSON.stringify(j)); DOM.journal.value=""; countJournalChars(); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensurePopoverChart(); renderGoals(); }
+function saveSport(){ if(!DOM.stype) return; const type=DOM.stype.value?DOM.stype.value.trim():""; const duration = parseInt(DOM.sportDuration.value,10) || 0; if(!type){alert("Adj meg egy edzés típust.");return} let s=JSON.parse(localStorage.getItem('sport')||"[]"); s.push({type:type,duration:duration,date:Date.now()}); localStorage.setItem('sport',JSON.stringify(s)); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensurePopoverChart(); }
+function saveBook(){ if(!DOM.btitle) return; const title=DOM.btitle.value?DOM.btitle.value.trim():""; const pages = parseInt(DOM.bpages.value,10)||0; const minutes = parseInt(DOM.bminutes.value,10)||0; if(!title){alert("Adj meg egy könyvcímet.");return} let b=JSON.parse(localStorage.getItem('book')||"[]"); b.push({title:title,pages:pages,minutes:minutes,date:Date.now()}); localStorage.setItem('book',JSON.stringify(b)); DOM.btitle.value=""; DOM.bpages.value=20; DOM.bminutes.value=0; DOM.bookPagesLabel.innerText='20'; if(document.getElementById('stat').classList.contains('active')) loadStats(); ensurePopoverChart(); }
+
+// stat load: extended display of pages/duration info
 function switchStat(m){ statMode=m; if(DOM.weekBtn) DOM.weekBtn.classList.toggle("active", m==="week"); if(DOM.yearBtn) DOM.yearBtn.classList.toggle("active", m==="year"); loadStats(); }
 function loadStats(){
   const now=Date.now(), week=7*864e5;
@@ -453,49 +701,145 @@ function loadStats(){
   const sf = statMode==="week" ? sWithIdx.filter(x=>now-x.date<week) : sWithIdx;
   const bf = statMode==="week" ? bWithIdx.filter(x=>now-x.date<week) : bWithIdx;
   if(DOM.statWrite) DOM.statWrite.innerText = `📓 Naplók: ${jf.length}`;
-  if(DOM.statSport) DOM.statSport.innerText = `🏋️ Edzések: ${sf.length}`;
-  if(DOM.statBook) DOM.statBook.innerText = `📚 Könyvek: ${bf.length}`;
+  if(DOM.statSport) DOM.statSport.innerText = `🏋️ Edzések: ${sf.length} — Össz idő: ${sf.reduce((a,c)=>a+(c.duration||0),0)} perc`;
+  if(DOM.statBook) DOM.statBook.innerText = `📚 Könyvek: ${bf.length} — Össz oldalak: ${bf.reduce((a,c)=>a+(c.pages||0),0)}`;
+
   if(statChartObj) statChartObj.destroy();
   if(DOM.statChart){
     statChartObj = new Chart(DOM.statChart, { type:"bar", data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length],backgroundColor:['#ff9800','#ff5722','#9c27b0']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
   }
-  if(document.getElementById('statJournalList')) document.getElementById('statJournalList').innerHTML = jf.map(x=>`<div class="card">${escapeHtml(truncate(x.text,200))}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
-  if(document.getElementById('statSportList')) document.getElementById('statSportList').innerHTML = sf.map(x=>`<div class="card">${escapeHtml(x.type)}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
-  if(document.getElementById('statBookList')) document.getElementById('statBookList').innerHTML = bf.map(x=>`<div class="card">${escapeHtml(x.title)}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${x._idx}">Töröl</button></div></div>`).join("");
+
+  if(document.getElementById('statJournalList')) document.getElementById('statJournalList').innerHTML = jf.map(x=>`<div class="card">${escapeHtml(truncate(x.text,200))}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${x._idx}">Töröl</button><button class="small-btn small-secondary" data-action="fav" data-type="journal" data-idx="${x._idx}">Kedvenc</button></div></div>`).join("");
+  if(document.getElementById('statSportList')) document.getElementById('statSportList').innerHTML = sf.map(x=>`<div class="card">${escapeHtml(x.type)} — ${x.duration||0} perc<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="sport" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="sport" data-idx="${x._idx}">Töröl</button><button class="small-btn small-secondary" data-action="fav" data-type="sport" data-idx="${x._idx}">Kedvenc</button></div></div>`).join("");
+  if(document.getElementById('statBookList')) document.getElementById('statBookList').innerHTML = bf.map(x=>`<div class="card">${escapeHtml(x.title)} — ${x.pages||0} oldal (${x.minutes||0} perc)<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="book" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="book" data-idx="${x._idx}">Töröl</button><button class="small-btn small-secondary" data-action="fav" data-type="book" data-idx="${x._idx}">Kedvenc</button></div></div>`).join("");
 }
 
-/* Account */
+// --- Account ---
 function loadAccountInfo(){ const acc=JSON.parse(localStorage.getItem('account')||"{}"); if(DOM.accName) DOM.accName.innerText=acc.name||'—'; if(DOM.accEmail) DOM.accEmail.innerText=acc.email||'—'; }
 function openAccountEditor(){ const acc=JSON.parse(localStorage.getItem('account')||"{}"); const name=prompt("Név:", acc.name||""); if(name===null) return; const email=prompt("E-mail:", acc.email||""); if(email===null) return; localStorage.setItem('account',JSON.stringify({name:name.trim(),email:email.trim()})); loadAccountInfo(); }
 function clearAccount(){ if(!confirm("Biztosan törlöd a fiókadatokat?")) return; localStorage.removeItem('account'); loadAccountInfo(); }
 
-/* Modal / edit / delete / undo / import/export */
-function openEditModal(type, originalIdx){ currentEdit={type,idx:originalIdx}; DOM.modalFieldJournal.style.display='none'; DOM.modalFieldSport.style.display='none'; DOM.modalFieldBook.style.display='none'; const arr=JSON.parse(localStorage.getItem(type)||"[]"); const item=arr[originalIdx]||{}; if(type==='journal'){DOM.modalFieldJournal.style.display='';DOM.modalJournal.value=item.text||'';DOM.modalCharCount.innerText=DOM.modalJournal.value.length;} if(type==='sport'){DOM.modalFieldSport.style.display='';DOM.modalSportType.value=item.type||'';} if(type==='book'){DOM.modalFieldBook.style.display='';DOM.modalBookTitle.value=item.title||'';} DOM.modalBackdrop.style.display='flex'; setTimeout(()=>{ if(type==='journal')DOM.modalJournal.focus(); if(type==='sport')DOM.modalSportType.focus(); if(type==='book')DOM.modalBookTitle.focus(); },50); }
+// --- Modal / edit / delete / undo / import/export (kiterjesztve goal/sport/book) ---
+function openEditModal(type, originalIdx){
+  currentEdit={type,idx:originalIdx};
+  DOM.modalFieldJournal.style.display='none';
+  DOM.modalFieldSport.style.display='none';
+  DOM.modalFieldBook.style.display='none';
+  DOM.modalFieldGoal.style.display='none';
+  const arr = JSON.parse(localStorage.getItem(type)||"[]");
+  const item = arr[originalIdx] || {};
+  if(type==='journal'){ DOM.modalFieldJournal.style.display=''; DOM.modalJournal.value=item.text||''; DOM.modalCharCount.innerText = DOM.modalJournal.value.length; }
+  if(type==='sport'){ DOM.modalFieldSport.style.display=''; DOM.modalSportType.value = item.type || ''; DOM.modalSportDuration.value = item.duration || 30; DOM.modalSportDurationLabel.innerText = DOM.modalSportDuration.value; }
+  if(type==='book'){ DOM.modalFieldBook.style.display=''; DOM.modalBookTitle.value = item.title || ''; DOM.modalBookPages.value = item.pages || 20; DOM.modalBookPagesLabel.innerText = DOM.modalBookPages.value; DOM.modalBookMinutes.value = item.minutes || 0; }
+  if(type==='goal'){ DOM.modalFieldGoal.style.display=''; DOM.modalGoalText.value = item.text || ''; DOM.modalGoalCategory.value = item.category || 'near'; DOM.modalGoalDone.checked = !!item.done; }
+  DOM.modalBackdrop.style.display='flex';
+  setTimeout(()=>{ if(type==='journal') DOM.modalJournal.focus(); if(type==='sport') DOM.modalSportType.focus(); if(type==='book') DOM.modalBookTitle.focus(); if(type==='goal') DOM.modalGoalText.focus(); },50);
+}
 function closeModal(){ currentEdit=null; DOM.modalBackdrop.style.display='none'; }
-function modalSave(){ if(!currentEdit) return; const {type,idx}=currentEdit; let arr=JSON.parse(localStorage.getItem(type)||"[]"); if(type==='journal'){ const newText=DOM.modalJournal.value.trim(); if(newText.length<90){alert("A naplónak legalább 90 karakter hosszúnak kell lennie.");return} if(idx>=0&&idx<arr.length){arr[idx].text=newText;arr[idx].date=Date.now();}else arr.push({text:newText,date:Date.now()}); } else if(type==='sport'){ const newType=DOM.modalSportType.value.trim(); if(!newType){alert("Adj meg egy edzés típust.");return} if(idx>=0&&idx<arr.length){arr[idx].type=newType;arr[idx].date=Date.now();}else arr.push({type:newType,date:Date.now()}); } else if(type==='book'){ const newTitle=DOM.modalBookTitle.value.trim(); if(!newTitle){alert("Adj meg egy könyvcímet.");return} if(idx>=0&&idx<arr.length){arr[idx].title=newTitle;arr[idx].date=Date.now();}else arr.push({title:newTitle,date:Date.now()}); } localStorage.setItem(type,JSON.stringify(arr)); closeModal(); loadStats(); ensureDiagramCreatedAndUpdated(); }
-function performDelete(type, originalIdx){ let arr=JSON.parse(localStorage.getItem(type)||"[]"); if(originalIdx<0||originalIdx>=arr.length) return; const [removed]=arr.splice(originalIdx,1); localStorage.setItem(type,JSON.stringify(arr)); const undoEntry={type,data:removed,idx:originalIdx}; undoStack.push(undoEntry); if(DOM.undoMsg) DOM.undoMsg.innerText=`Törölve: ${truncate(removed.text||removed.type||removed.title||'',40)}`; if(DOM.undoBar) DOM.undoBar.style.display='flex'; loadStats(); ensureDiagramCreatedAndUpdated(); const to=setTimeout(()=>{ const pos=undoStack.indexOf(undoEntry); if(pos>=0) undoStack.splice(pos,1); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; },8000); undoTimeouts.push(to); }
-function undoLast(){ if(undoStack.length===0) return; const entry=undoStack.pop(); const t=undoTimeouts.pop(); if(t) clearTimeout(t); let arr=JSON.parse(localStorage.getItem(entry.type)||"[]"); const insertIdx=Math.min(Math.max(0,entry.idx),arr.length); arr.splice(insertIdx,0,entry.data); localStorage.setItem(entry.type,JSON.stringify(arr)); loadStats(); ensureDiagramCreatedAndUpdated(); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; }
+function modalSave(){
+  if(!currentEdit) return;
+  const {type,idx} = currentEdit;
+  let arr = JSON.parse(localStorage.getItem(type)||"[]");
+  if(type==='journal'){
+    const newText = DOM.modalJournal.value.trim();
+    if(newText.length<90){ alert("A naplónak legalább 90 karakter hosszúnak kell lennie."); return; }
+    if(idx>=0 && idx<arr.length){ arr[idx].text=newText; arr[idx].date=Date.now(); } else arr.push({text:newText,date:Date.now()});
+  } else if(type==='sport'){
+    const newType = DOM.modalSportType.value.trim();
+    const dur = parseInt(DOM.modalSportDuration.value,10) || 0;
+    if(!newType){ alert("Adj meg egy edzés típust."); return; }
+    if(idx>=0 && idx<arr.length){ arr[idx].type=newType; arr[idx].duration=dur; arr[idx].date=Date.now(); } else arr.push({type:newType,duration:dur,date:Date.now()});
+  } else if(type==='book'){
+    const newTitle = DOM.modalBookTitle.value.trim();
+    const pages = parseInt(DOM.modalBookPages.value,10)||0;
+    const mins = parseInt(DOM.modalBookMinutes.value,10)||0;
+    if(!newTitle){ alert("Adj meg egy könyvcímet."); return; }
+    if(idx>=0 && idx<arr.length){ arr[idx].title=newTitle; arr[idx].pages=pages; arr[idx].minutes=mins; arr[idx].date=Date.now(); } else arr.push({title:newTitle,pages:pages,minutes:mins,date:Date.now()});
+  } else if(type==='goal'){
+    const text = DOM.modalGoalText.value.trim();
+    const cat = DOM.modalGoalCategory.value || 'near';
+    const done = !!DOM.modalGoalDone.checked;
+    if(!text){ alert('Adj meg egy célt.'); return; }
+    if(idx>=0 && idx<arr.length){ arr[idx].text=text; arr[idx].category=cat; arr[idx].done=done; arr[idx].date=Date.now(); } else arr.push({text,category:cat,done:done,priority:'normal',date:Date.now()});
+  }
+  localStorage.setItem(type, JSON.stringify(arr));
+  closeModal();
+  loadStats();
+  ensurePopoverChart();
+  renderGoals();
+}
+function performDelete(type, originalIdx){
+  let arr = JSON.parse(localStorage.getItem(type)||"[]");
+  if(originalIdx<0||originalIdx>=arr.length) return;
+  const [removed] = arr.splice(originalIdx,1);
+  localStorage.setItem(type, JSON.stringify(arr));
+  const undoEntry = {type, data:removed, idx:originalIdx};
+  undoStack.push(undoEntry);
+  if(DOM.undoMsg) DOM.undoMsg.innerText = `Törölve: ${truncate(removed.text||removed.type||removed.title||'',40)}`;
+  if(DOM.undoBar) DOM.undoBar.style.display='flex';
+  loadStats();
+  ensurePopoverChart();
+  renderGoals();
+  const to = setTimeout(()=>{ const pos = undoStack.indexOf(undoEntry); if(pos>=0) undoStack.splice(pos,1); if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none'; },8000);
+  undoTimeouts.push(to);
+}
+function undoLast(){
+  if(undoStack.length===0) return;
+  const entry = undoStack.pop();
+  const t = undoTimeouts.pop();
+  if(t) clearTimeout(t);
+  let arr = JSON.parse(localStorage.getItem(entry.type)||"[]");
+  const insertIdx = Math.min(Math.max(0,entry.idx),arr.length);
+  arr.splice(insertIdx,0,entry.data);
+  localStorage.setItem(entry.type,JSON.stringify(arr));
+  loadStats();
+  ensurePopoverChart();
+  if(undoStack.length===0 && DOM.undoBar) DOM.undoBar.style.display='none';
+}
 function hideUndoBar(){ undoStack=[]; undoTimeouts.forEach(t=>clearTimeout(t)); undoTimeouts=[]; if(DOM.undoBar) DOM.undoBar.style.display='none'; }
-function exportData(){ const payload={journal:JSON.parse(localStorage.getItem('journal')||"[]"),sport:JSON.parse(localStorage.getItem('sport')||"[]"),book:JSON.parse(localStorage.getItem('book')||"[]"),exportedAt:Date.now()}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`motivacio-export-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
-function importFile(ev){ const f=ev.target.files&&ev.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=function(e){ try{ const data=JSON.parse(e.target.result); if(typeof data!=='object') throw new Error('Hibás fájl.'); const j=Array.isArray(data.journal)?data.journal:[]; const s=Array.isArray(data.sport)?data.sport:[]; const b=Array.isArray(data.book)?data.book:[]; const wantReplace=confirm("Felülírja a helyi adatokat az importáltakkal? (OK = felülír, Mégse = összevonás)"); if(wantReplace){ localStorage.setItem('journal',JSON.stringify(j)); localStorage.setItem('sport',JSON.stringify(s)); localStorage.setItem('book',JSON.stringify(b)); } else { const curJ=JSON.parse(localStorage.getItem('journal')||"[]"); const curS=JSON.parse(localStorage.getItem('sport')||"[]"); const curB=JSON.parse(localStorage.getItem('book')||"[]"); localStorage.setItem('journal',JSON.stringify(curJ.concat(j))); localStorage.setItem('sport',JSON.stringify(curS.concat(s))); localStorage.setItem('book',JSON.stringify(curB.concat(b))); } alert("Import sikeres."); loadStats(); ensureDiagramCreatedAndUpdated(); } catch(err){ alert("Import hiba: "+err.message); } }; reader.readAsText(f); ev.target.value=''; }
 
-/* Helper-ek */
+// --- Import / Export ---
+function exportData(){ const payload={journal:JSON.parse(localStorage.getItem('journal')||"[]"),sport:JSON.parse(localStorage.getItem('sport')||"[]"),book:JSON.parse(localStorage.getItem('book')||"[]"),goals:JSON.parse(localStorage.getItem('goals')||"[]"),favorites:JSON.parse(localStorage.getItem('favorites')||"[]"),exportedAt:Date.now()}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`motivacio-export-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+function importFile(ev){ const f=ev.target.files&&ev.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=function(e){ try{ const data=JSON.parse(e.target.result); if(typeof data!=='object') throw new Error('Hibás fájl.'); const j=Array.isArray(data.journal)?data.journal:[]; const s=Array.isArray(data.sport)?data.sport:[]; const b=Array.isArray(data.book)?data.book:[]; const g=Array.isArray(data.goals)?data.goals:[]; const fav=Array.isArray(data.favorites)?data.favorites:[]; const wantReplace=confirm("Felülírja a helyi adatokat az importáltakkal? (OK = felülír, Mégse = összevonás)"); if(wantReplace){ localStorage.setItem('journal',JSON.stringify(j)); localStorage.setItem('sport',JSON.stringify(s)); localStorage.setItem('book',JSON.stringify(b)); localStorage.setItem('goals',JSON.stringify(g)); localStorage.setItem('favorites',JSON.stringify(fav)); } else { const curJ=JSON.parse(localStorage.getItem('journal')||"[]"); const curS=JSON.parse(localStorage.getItem('sport')||"[]"); const curB=JSON.parse(localStorage.getItem('book')||"[]"); const curG=JSON.parse(localStorage.getItem('goals')||"[]"); const curF=JSON.parse(localStorage.getItem('favorites')||"[]"); localStorage.setItem('journal',JSON.stringify(curJ.concat(j))); localStorage.setItem('sport',JSON.stringify(curS.concat(s))); localStorage.setItem('book',JSON.stringify(curB.concat(b))); localStorage.setItem('goals',JSON.stringify(curG.concat(g))); localStorage.setItem('favorites',JSON.stringify(curF.concat(fav))); } alert("Import sikeres."); loadStats(); ensurePopoverChart(); renderGoals(); } catch(err){ alert("Import hiba: "+err.message); } }; reader.readAsText(f); ev.target.value=''; }
+
+// --- Helpers ---
 function formatDate(ts){ if(!ts) return ""; try{ const d=new Date(ts); return d.toLocaleString('hu-HU',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){return "";} }
 function truncate(str,max){ if(!str) return ""; return str.length>max?str.slice(0,max-1)+'…':str; }
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function escapeHtml(s){ if(s===undefined || s===null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
+// --- Inicializálás és kezdeti beállítások ---
 document.addEventListener('DOMContentLoaded', ()=>{
   initDOM();
-  // diagramot csak akkor hozunk létre, amikor a Menü->Diagram-ra kattintasz (és itt előkészítjük, ha a menü nyitva van)
-  // de létrehozhatjuk egyszer rögtön is, hogy az első megjelenítés zökkenőmentes legyen:
-  // createDiagramChart(); // opcionális — most csak az első Diagram gombnyomáskor készül el a chart
   newQuote();
   countJournalChars();
-  // ha a felhasználó közvetlenül a menüt hagyta aktívnak, frissítsük
-  const active = document.querySelector('.view.active');
-  if(active && active.id === 'menu') ensureDiagramCreatedAndUpdated();
+  renderGoals();
+  // ha a felhasználó közvetlenül a menüt hagyta aktívnak, nincs diagram ott — a három pont menüben jelenik meg
   if(document.getElementById('stat').classList.contains('active')) loadStats();
 });
+
+// --- Quote újratöltés ---
+function newQuote(){
+  const q = quotes[Math.floor(Math.random()*quotes.length)];
+  if(DOM.quote) DOM.quote.innerText = q.t;
+  const avatar = q.p ? q.p : ('https://i.pravatar.cc/150?u=' + encodeURIComponent(q.a));
+  if(DOM.authorPhoto){ DOM.authorPhoto.src = avatar; DOM.authorPhoto.alt = q.a; DOM.authorPhoto.dataset.sourceUrl = q.creditUrl || ''; }
+  if(DOM.authorTag) DOM.authorTag.innerText = q.a;
+  if(DOM.authorCredit){ if(q.credit) DOM.authorCredit.innerHTML = `<a href="${escapeHtml(q.creditUrl||'#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.credit)}</a>`; else DOM.authorCredit.innerHTML = ''; }
+  if(DOM.dailyQuote) DOM.dailyQuote.innerText = q.t + " – " + q.a;
+  // ha a popover nyitva van és diagram nézet aktív, frissítsük
+  if(DOM.diagramPopoverBackdrop && DOM.diagramPopoverBackdrop.style.display==='flex' && DOM.popDiagramArea && DOM.popDiagramArea.style.display!=='none'){
+    ensurePopoverChart(DOM.popMonthBtn && DOM.popMonthBtn.classList.contains('active') ? 'month' : 'year');
+  }
+}
+
+// --- Bizonyos alap view-ok frissítése ---
+function ensureDiagramCreatedAndUpdated(){
+  // korábbi funkciót fenntartjuk de diagram a popoverben látható — így ide csak statikus frissítést indítunk
+  ensurePopoverChart();
+}
+
+// --- További segédfunkciók és visszajelzés a UI-ra ---
+// (nincs további kód)
 </script>
 </body>
 </html>
