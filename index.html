@@ -89,6 +89,9 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 /* three-dot button */
 .more-btn{position:fixed;right:22px;top:22px;width:44px;height:44px;border-radius:50%;background:#222;color:#fff;border:2px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;z-index:4000;cursor:pointer}
 .more-btn:hover{background:#2a2a2a}
+
+/* stat chart canvas sizing (kor diagram) */
+#statChart{height:240px;display:block}
 </style>
 </head>
 <body>
@@ -105,7 +108,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 
   <div class="header-quote" id="dailyQuote"></div>
 
-  <!-- FŐOLDAL: csak egy kép (szerző portré) és idézet + célok -->
+  <!-- FŐOLDAL: csak egy kép (szerző portré) és idézet + (a Célok áthelyezve a Menübe) -->
   <div id="mot" class="view active">
     <div class="motivation-card">
       <img id="authorPhoto" class="author-photo" alt="Szerző képe" title="Kattints a forrás megnyitásához, ha elérhető">
@@ -115,25 +118,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
     </div>
     <button id="newQuoteBtn" class="main">Új motiváció</button>
 
-    <!-- Goals: közeli / távoli -->
-    <div class="goals-panel card" id="goalsPanel">
-      <div style="font-weight:bold;margin-bottom:8px">Célok</div>
-      <div class="goals-tabs">
-        <button id="nearTab" class="active">Közeli célok</button>
-        <button id="farTab">Távoli célok</button>
-      </div>
-      <div class="goal-inputs">
-        <input id="goalText" placeholder="Új cél megadása..." />
-        <select id="goalPriority">
-          <option value="normal">Normál</option>
-          <option value="high">Fontos</option>
-        </select>
-        <button id="addGoalBtn" class="small-icon">+</button>
-      </div>
-      <div style="font-size:12px;opacity:.85">Mindkét kategória szerkeszthető, törölhető és pipálható.</div>
-      <div class="goal-list" id="goalList"></div>
-    </div>
-
+    <!-- NOTE: A Goals panel át lett helyezve a Menübe (a feladat szerint) -->
   </div>
 
   <!-- NAPLÓ -->
@@ -168,7 +153,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
     <button class="secondary" id="saveBookBtn">Mentés</button>
   </div>
 
-  <!-- STAT (részletes) -->
+  <!-- STAT (részletes) - a diagram most doughnut (kor) típus -->
   <div id="stat" class="view">
     <div class="stat-tabs">
       <button id="weekBtn" class="active">Heti</button>
@@ -195,7 +180,7 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
     </div>
   </div>
 
-  <!-- MENÜ: Fiók (diagram eltávolítva innen; a diagram a jobb felső "..." menüben található) -->
+  <!-- MENÜ: Fiók + ide került át a Célok panel -->
   <div id="menu" class="view">
     <div class="menu-controls">
       <button id="accountBtn" class="active">Fiók</button>
@@ -210,6 +195,26 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
           <button id="clearAccountBtn" class="small-btn small-danger" style="width:auto">Töröl</button>
         </div>
       </div>
+
+      <!-- Áthelyezett: Goals panel (korábban a főoldalon volt) -->
+      <div class="goals-panel card" id="goalsPanel">
+        <div style="font-weight:bold;margin-bottom:8px">Célok</div>
+        <div class="goals-tabs">
+          <button id="nearTab" class="active">Közeli célok</button>
+          <button id="farTab">Távoli célok</button>
+        </div>
+        <div class="goal-inputs">
+          <input id="goalText" placeholder="Új cél megadása..." />
+          <select id="goalPriority">
+            <option value="normal">Normál</option>
+            <option value="high">Fontos</option>
+          </select>
+          <button id="addGoalBtn" class="small-icon">+</button>
+        </div>
+        <div style="font-size:12px;opacity:.85">Mindkét kategória szerkeszthető, törölhető és pipálható.</div>
+        <div class="goal-list" id="goalList"></div>
+      </div>
+
     </div>
 
   </div>
@@ -307,13 +312,10 @@ button{width:100%;padding:12px;border:none;border-radius:14px;margin-top:8px;cur
 <script>
 /*
   Bővítések:
-  1) Főoldalon (mot) Célok panel: Közeli / Távoli kategóriák, szerkesztés, törlés, pipálás (kész).
-  2) A diagram kikerült a Menuból: a jobb felső három pont menüben van egy popover, ott a diagram és a Kedvencek.
-     A diagramnál havi és évi nézet választható (havi: utolsó 12 hónap; évi: utolsó 5 év).
-  3) Könyv: visszahozva oldal-sáv (slider) és napi olvasási percek (számmező).
-  4) Edzés: visszahozott csúszka az időtartamra, több kategória.
-  5) Kedvencek: a popoverban listázhatók, menthetők és törölhetők kedvenc idézetek/edzések/könyvek.
-  Fontos: az alap működés maradt és a meglévő adatok továbbra is localStorage-ban tárolódnak.
+  1) Főoldalon (mot) Célok panel át lett helyezve a Menübe (megőrizve a funkcionalitást).
+  2) A stat nézeten a korábbi oszlop (bar) diagram helyére kor (doughnut) diagram került.
+  3) A popover (három pont) diagramja megtartva, ott havi/évi aggregáció maradt.
+  4) A többi kód, localStorage, modalok, import/export, kedvencek stb. érintetlenek.
 */
 
 const quotes = [
@@ -419,7 +421,7 @@ function initDOM(){
   DOM.popDiagramChart = document.getElementById('popoverDiagramChart');
   DOM.popDiagramText = document.getElementById('popoverDiagramText');
   DOM.popDiagramArea = document.getElementById('popoverDiagramArea');
-  DOM.popFavArea = document.getElementById('popoverFavArea');
+  DOM.popFavArea = document.getElementById('popFavArea') || document.getElementById('popoverFavArea');
   DOM.popFavList = document.getElementById('favList');
   DOM.popDiagramBtn = document.getElementById('popDiagramBtn');
   DOM.popFavBtn = document.getElementById('popFavBtn');
@@ -524,7 +526,7 @@ function initDOM(){
   if (DOM.nearTab) DOM.nearTab.addEventListener('click', ()=> switchGoalTab('near'));
   if (DOM.farTab) DOM.farTab.addEventListener('click', ()=> switchGoalTab('far'));
   if (DOM.addGoalBtn) DOM.addGoalBtn.addEventListener('click', addGoal);
-  DOM.goalList.addEventListener('click', ev=>{
+  if (DOM.goalList) DOM.goalList.addEventListener('click', ev=>{
     const btn = ev.target.closest('button[data-action]');
     if(!btn) return;
     const action = btn.dataset.action;
@@ -554,6 +556,7 @@ function addGoal(){
 function renderGoals(){
   const g = getGoals().map((x,i)=>({...x,_idx:i}));
   const filtered = g.filter(x=>x.category===activeGoalTab);
+  if(!DOM.goalList) return;
   DOM.goalList.innerHTML = filtered.map(x=>`<div class="goal-item">
     <button class="small-icon" data-action="toggle" data-idx="${x._idx}" title="Kész / nem kész">${x.done? '☑' : '▢'}</button>
     <div class="text">${escapeHtml(x.text)}${x.priority==='high' ? ' <small style="color:#ffd89b">• fontosság</small>':''}</div>
@@ -580,7 +583,6 @@ function ensurePopoverChart(mode='month'){
   const now = new Date();
   let labels=[], jdata=[], sdata=[], bdata=[];
   if(mode==='month'){
-    // last 12 months, label 'Mon' translated short months
     const months = [];
     for(let i=11;i>=0;i--){
       const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
@@ -591,7 +593,6 @@ function ensurePopoverChart(mode='month'){
     sdata = months.map(m => s.filter(z=>{ const d=new Date(z.date); return d.getFullYear()===m.y && d.getMonth()===m.m }).length);
     bdata = months.map(m => b.filter(z=>{ const d=new Date(z.date); return d.getFullYear()===m.y && d.getMonth()===m.m }).length);
   } else {
-    // last 5 years
     const years=[];
     for(let i=4;i>=0;i--){
       const y = now.getFullYear()-i;
@@ -633,6 +634,7 @@ function addCurrentQuoteToFavorites(){
 }
 function refreshFavoritesList(){
   const fav = getFavorites().map((x,i)=>({...x,_idx:i}));
+  if(!DOM.popFavList) return;
   DOM.popFavList.innerHTML = fav.length===0 ? '<div style="opacity:.8">Nincsenek mentett kedvencek.</div>' : fav.map(x=>{
     if(x.kind==='quote') return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:8px;background:#111;margin-bottom:8px">
       <div style="flex:1"><div style="font-weight:bold">${escapeHtml(x.payload.text)}</div><div style="font-size:12px;opacity:.8">${escapeHtml(x.payload.author||'')}</div></div>
@@ -687,7 +689,7 @@ function saveJournal(){ if(!DOM.journal) return; const text=DOM.journal.value.tr
 function saveSport(){ if(!DOM.stype) return; const type=DOM.stype.value?DOM.stype.value.trim():""; const duration = parseInt(DOM.sportDuration.value,10) || 0; if(!type){alert("Adj meg egy edzés típust.");return} let s=JSON.parse(localStorage.getItem('sport')||"[]"); s.push({type:type,duration:duration,date:Date.now()}); localStorage.setItem('sport',JSON.stringify(s)); if(document.getElementById('stat').classList.contains('active')) loadStats(); ensurePopoverChart(); }
 function saveBook(){ if(!DOM.btitle) return; const title=DOM.btitle.value?DOM.btitle.value.trim():""; const pages = parseInt(DOM.bpages.value,10)||0; const minutes = parseInt(DOM.bminutes.value,10)||0; if(!title){alert("Adj meg egy könyvcímet.");return} let b=JSON.parse(localStorage.getItem('book')||"[]"); b.push({title:title,pages:pages,minutes:minutes,date:Date.now()}); localStorage.setItem('book',JSON.stringify(b)); DOM.btitle.value=""; DOM.bpages.value=20; DOM.bminutes.value=0; DOM.bookPagesLabel.innerText='20'; if(document.getElementById('stat').classList.contains('active')) loadStats(); ensurePopoverChart(); }
 
-// stat load: extended display of pages/duration info
+// stat load: doughnut chart (kor diagram) replacing bar
 function switchStat(m){ statMode=m; if(DOM.weekBtn) DOM.weekBtn.classList.toggle("active", m==="week"); if(DOM.yearBtn) DOM.yearBtn.classList.toggle("active", m==="year"); loadStats(); }
 function loadStats(){
   const now=Date.now(), week=7*864e5;
@@ -704,9 +706,44 @@ function loadStats(){
   if(DOM.statSport) DOM.statSport.innerText = `🏋️ Edzések: ${sf.length} — Össz idő: ${sf.reduce((a,c)=>a+(c.duration||0),0)} perc`;
   if(DOM.statBook) DOM.statBook.innerText = `📚 Könyvek: ${bf.length} — Össz oldalak: ${bf.reduce((a,c)=>a+(c.pages||0),0)}`;
 
+  // destroy previous chart if exists
   if(statChartObj) statChartObj.destroy();
   if(DOM.statChart){
-    statChartObj = new Chart(DOM.statChart, { type:"bar", data:{labels:["Napló","Edzés","Könyv"],datasets:[{data:[jf.length,sf.length,bf.length],backgroundColor:['#ff9800','#ff5722','#9c27b0']}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
+    const ctx = DOM.statChart.getContext('2d');
+    // Use doughnut for kor diagram, show counts as data
+    statChartObj = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Napló','Edzés','Könyv'],
+        datasets: [{
+          data: [jf.length, sf.length, bf.length],
+          backgroundColor: ['#ff9800','#ff5722','#9c27b0'],
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#ddd' }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context){
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a,b)=>a+b,0);
+                const pct = total>0 ? Math.round((value/total)*100) : 0;
+                return `${label}: ${value} (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   if(document.getElementById('statJournalList')) document.getElementById('statJournalList').innerHTML = jf.map(x=>`<div class="card">${escapeHtml(truncate(x.text,200))}<div class="entry-meta">${formatDate(x.date)}</div><div class="entry-actions"><button class="small-btn small-secondary" data-action="edit" data-type="journal" data-idx="${x._idx}">Szerkeszt</button><button class="small-btn small-danger" data-action="delete" data-type="journal" data-idx="${x._idx}">Töröl</button><button class="small-btn small-secondary" data-action="fav" data-type="journal" data-idx="${x._idx}">Kedvenc</button></div></div>`).join("");
